@@ -1,0 +1,453 @@
+---
+title: "代码随想录二刷记录-数组篇"
+description: "为了准备秋招笔试，二刷代码随想录的题目，并将解答过程记录"
+pubDate: "08 07 2024"
+categories:
+  - tech
+tags:
+  - 算法
+---
+
+# 题一、二分查找
+
+力扣题目链接:https://leetcode.cn/problems/binary-search/description/
+
+## 题目描述
+
+给定一个 n 个元素有序的（升序）整型数组 nums 和一个目标值 target  ，写一个函数搜索 nums 中的 target，如果目标值存在返回下标，否则返回 -1。
+
+示例 1:
+```sh
+输入: nums = [-1,0,3,5,9,12], target = 9     
+输出: 4       
+解释: 9 出现在 nums 中并且下标为 4
+```
+示例 2:
+```sh
+输入: nums = [-1,0,3,5,9,12], target = 2     
+输出: -1       
+解释: 2 不存在 nums 中因此返回 -1
+```
+
+提示：
+
+- 你可以假设 nums 中的所有元素是不重复的。
+- n 将在 [1, 10000]之间。
+- nums 的每个元素都将在 [-9999, 9999]之间
+### 思路
+
+因为提示里已经说了元素不重复，且数组有序，所以可以使用二分查找
+
+二分查找关键的一点就在于**边界的定义**
+
+写二分法，区间的定义一般为两种，左闭右闭即[left, right]，或者左闭右开[left, right)
+
+#### 二分法的第一种写法
+
+首先定义一个target在左闭右闭的区间里，**也就是[left, right] （这个很重要非常重要）**，区间的定义就决定了代码如何写
+
+因为区间定义在[left，right]，所以有如下两点：
+
+- while(left 小于等于 right) 要使用 小于等于号 ，因为left == right是有意义的，所以使用 小于等于
+
+- if (nums[middle] > target) right 要赋值为 middle - 1，因为当前这个nums[middle]一定不是target，那么接下来要查找的左区间结束下标位置就是 middle - 1
+
+例如在数组：1,2,3,4,7,9,10中查找元素2，如图所示：(图片摘自代码随想录)
+
+<image src="https://code-thinking-1253855093.file.myqcloud.com/pics/20210311153055723.jpg"/>
+
+```java
+class Solution {
+    public int search(int[] nums, int target) {
+        // 避免当 target 小于nums[0] nums[nums.length - 1]时多次循环运算
+        if (target < nums[0] || target > nums[nums.length - 1]) {
+            return -1;
+        }
+        int left = 0, right = nums.length - 1;
+        while (left <= right) {
+            int mid = left + ((right - left) >> 1);
+            if (nums[mid] == target) {
+                return mid;
+            }
+            else if (nums[mid] < target) {
+                left = mid + 1;
+            }
+            else { // nums[mid] > target
+                right = mid - 1;
+            }
+        }
+        // 未找到目标值
+        return -1;
+    }
+}
+```
+
+#### 二分法的第二种写法
+
+如果说定义 target 是在一个在左闭右开的区间里，也就是[left, right) ，那么二分法的边界处理方式则截然不同
+
+有如下两点：
+
+- while(left < right) 要使用 小于号 ，因为left == right是没有意义的，所以使用 小于
+
+- if (nums[middle] > target) right 更新为 middle，因为当前nums[middle]不等于target，去左区间继续寻找，而寻找区间是左闭右开区间，所以right更新为middle，即：下一个查询区间不会去比较nums[middle]
+
+在数组：1,2,3,4,7,9,10中查找元素2，如图所示：（注意和方法一的区别）
+
+<image src="https://code-thinking-1253855093.file.myqcloud.com/pics/20210311153123632.jpg"/>
+
+```java
+class Solution {
+    public int search(int[] nums, int target) {
+        int left = 0, right = nums.length;
+        while (left < right) {
+            int mid = left + ((right - left) >> 1);
+            if (nums[mid] == target) {
+                return mid;
+            }
+            else if (nums[mid] < target) {
+                left = mid + 1;
+            }
+            else { // nums[mid] > target
+                right = mid;
+            }
+        }
+        // 未找到目标值
+        return -1;
+    }
+}
+```
+
+# 题二、移除元素
+
+力扣链接:https://leetcode.cn/problems/remove-element/description/
+
+## 题目描述
+
+给你一个数组 nums 和一个值 val，你需要 原地 移除所有数值等于 val 的元素，并返回移除后数组的新长度。
+
+不要使用额外的数组空间，你必须仅使用 O(1) 额外空间并**原地**修改输入数组。
+
+元素的顺序可以改变。你不需要考虑数组中超出新长度后面的元素。
+
+示例 1:
+```sh
+给定nums = [3,2,2,3], val = 3
+函数应该返回新的长度 2, 并且 nums 中的前两个元素均为 2。 你不需要考虑数组中超出新长度后面的元素。
+```
+
+### 思路
+
+因为数组中的元素是不能被删除的，只能被覆盖(**数组的元素在内存地址中是连续的**)
+
+所以采用**双指针解法**来做这道题(后面常用，需牢固掌握)
+
+双指针法（快慢指针法）： **通过一个快指针和慢指针在一个for循环下完成两个for循环的工作**
+
+- 快指针：寻找新数组的元素，新数组就是不含有目标元素的数组
+
+- 慢指针：指向更新新数组下标的位置
+
+数组的具体变化过程可以去代码随想录上面参考GIF
+
+双指针Java写法1:
+
+```java
+
+class Solution {
+    public int removeElement(int[] nums, int val) {
+        // 快慢指针
+        int slowIndex = 0;
+        for (int fastIndex = 0; fastIndex < nums.length; fastIndex++) {
+            if (nums[fastIndex] != val) {
+                nums[slowIndex] = nums[fastIndex];
+                slowIndex++;
+            }
+        }
+        return slowIndex;
+    }
+}
+```
+
+# 题三、有序数组的平方
+
+力扣链接:https://leetcode.cn/problems/squares-of-a-sorted-array/description/
+
+## 题目描述
+
+给你一个按 非递减顺序 排序的整数数组 nums，返回 每个数字的平方 组成的新数组，要求也按 非递减顺序 排序。
+
+示例 1：
+```sh
+输入：nums = [-4,-1,0,3,10]
+输出：[0,1,9,16,100]
+解释：平方后，数组变为 [16,1,0,9,100]
+```
+
+本人第一想法；暴力平方之后排序
+
+### 思路
+
+双指针解法思路如下：指针i指向原数组起始位置，指针j指向原数组终止位置
+
+定义一个新数组result，和原数组一样的大小，让k指向result数组终止位置
+
+1. 如果nums[i]的平方大于nums[j]的平方，则将nums[i]的平方放入result[k--]，i++
+
+2. 如果nums[i]的平方小于nums[j]的平方，则将nums[j]的平方放入result[k--]，j--
+
+3. 如果nums[i]的平方等于nums[j]的平方，则将nums[i]的平方放入result[k--]，i++
+
+```java
+class Solution {
+    public int[] sortedSquares(int[] nums) {
+        //定义左右指针
+        int left = 0;
+        int right = nums.length - 1;
+        //定义结果数组
+        int[] result = new int[nums.length];
+        //指针j指向结果数组的最后一个元素
+        int j = nums.length - 1;
+        while(left <= right) {
+            if(nums[left] * nums[left] > nums[right] * nums[right]) {
+                result[j--] = nums[left] * nums[left++];
+            }else{
+                result[j--] = nums[right] * nums[right--];
+            }
+        }
+        return result;
+    }
+}
+```
+
+# 题四、长度最小的子数组
+
+力扣链接:https://leetcode.cn/problems/minimum-size-subarray-sum/description/
+
+## 题目描述
+
+给定一个含有 n 个正整数的数组和一个正整数 s ，找出该数组中满足其和 ≥ s 的长度最小的连续子数组，并返回其长度。如果不存在符合条件的连续子数组，返回 0。
+
+示例：
+```sh
+输入：s = 7, nums = [2,3,1,2,4,3]
+输出：2
+解释：子数组 [4,3] 是该条件下的长度最小的
+```
+
+### 思路
+
+利用滑动窗口来做本题(其实是双指针解法的一种，不过更像一个滑动的窗口)
+
+所谓滑动窗口，就是**不断的调节子序列的起始位置和终止位置**，从而得出我们要想的结果
+
+暴力解法要用两个for循环，滑动窗口可以在一个for循环内解决
+
+在本题中实现滑动窗口，主要确定如下三点：
+
+1. 窗口内是什么？
+2. 如何移动窗口的起始位置？
+3. 如何移动窗口的结束位置？
+
+窗口就是满足其和 大于等于 target的最小连续子数组
+
+窗口的起始位置如何移动：如果当前窗口的值大于等于target了，窗口就要向前移动了（也就是该缩小了）
+
+窗口的结束位置如何移动：窗口的结束位置就是遍历数组的指针，也就是for循环里的索引
+
+滑动窗口的精妙之处在于**根据当前子序列和大小的情况，不断调节子序列的起始位置。从而将O(n^2)暴力解法降为O(n)**
+
+不要以为for里放一个while就以为是O(n^2)， 主要是看每一个元素被操作的次数，每个元素在滑动窗后进来操作一次，出去操作一次，每个元素都是被操作两次，所以时间复杂度是 2 × n 也就是O(n)
+
+```java
+class Solution {
+    public int minSubArrayLen(int target, int[] nums) {
+        int sum = 0;
+        int n = nums.length;
+        int left = 0; //左指针
+        //result记录窗口内元素个数
+        int result = Integer.MAX_VALUE;
+        for(int right = 0; right < n; right++) {
+            //计算窗口内的和
+            sum += nums[right];
+            while(sum >= target) {
+                //right - left + 1是计算窗口内元素的个数
+                result = Math.min(result , right - left + 1);
+                //因为不符合要求，所以窗口向前移动，同时要把最前面的元素移除
+                sum -= nums[left++];
+            }
+        }
+        return result == Integer.MAX_VALUE ? 0 : result;
+    }
+}
+```
+
+# 题五、区间和
+
+卡码网链接:https://kamacoder.com/problempage.php?pid=1070
+
+## 题目描述
+
+给定一个整数数组 Array，请计算该数组在每个指定区间内元素的总和。
+
+输入描述
+
+第一行输入为整数数组 Array 的长度 n，接下来 n 行，每行一个整数，表示数组的元素。随后的输入为需要计算总和的区间，直至文件结束
+
+输出描述
+
+输出每个指定区间内元素的总和
+
+### 思路
+
+**前缀和解法:**
+
+前缀和的思想是重复利用计算过的子数组之和，从而降低区间查询需要累加计算的次数
+
+例如，我们要统计 vec[i] 这个数组上的区间和。
+
+我们先做累加，即 p[i] 表示 下标 0 到 i 的 vec[i] 累加 之和。
+
+如图：(图片摘自代码随想录)
+
+<image src="https://code-thinking-1253855093.file.myqcloud.com/pics/20240627110604.png"/>
+
+如果，我们想统计，在vec数组上 下标 2 到下标 5 之间的累加和，那是不是就用 p[5] - p[1] 就可以了(自行画图理解)
+
+```java
+import java.util.Scanner;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+
+        int n = scanner.nextInt();
+        int[] vec = new int[n];
+        int[] p = new int[n];
+
+        int presum = 0;
+        for (int i = 0; i < n; i++) {
+            vec[i] = scanner.nextInt();
+            presum += vec[i];
+            p[i] = presum;
+        }
+
+        while (scanner.hasNextInt()) {
+            int a = scanner.nextInt();
+            int b = scanner.nextInt();
+
+            int sum;
+            if (a == 0) {
+                sum = p[b];
+            } else {
+                sum = p[b] - p[a - 1];
+            }
+            System.out.println(sum);
+        }
+
+        scanner.close();
+    }
+}
+```
+
+# 题六、开发商购买土地
+
+卡码网链接:https://kamacoder.com/problempage.php?pid=1044
+
+## 题目描述
+```sh
+在一个城市区域内，被划分成了n * m个连续的区块，每个区块都拥有不同的权值，代表着其土地价值。目前，有两家开发公司，A 公司和 B 公司，希望购买这个城市区域的土地。
+
+现在，需要将这个城市区域的所有区块分配给 A 公司和 B 公司。
+
+然而，由于城市规划的限制，只允许将区域按横向或纵向划分成两个子区域，而且每个子区域都必须包含一个或多个区块。
+
+为了确保公平竞争，你需要找到一种分配方式，使得 A 公司和 B 公司各自的子区域内的土地总价值之差最小。
+
+注意：区块不可再分
+```
+
+输入描述
+
+```sh
+第一行输入两个整数 n 和 m，分别表示城市区域的行数和列数。
+
+接下来的 n 行，每行 m 个整数，表示每个区块的权值。
+```
+
+输出描述
+
+```sh
+请输出一个整数，代表两个子区域内土地总价值之间的最小差距
+```
+
+### 思路
+
+依旧是采取前缀和的解法来做这道题
+
+前缀和的思路:先统计好，前n行的和 q[n]，如果要求矩阵 a行 到 b行 之间的总和，那么就 q[b] - q[a - 1]就好
+
+或者是先将行方向，和列方向的和求出来，这样可以方便知道划分的两个区间的和。
+
+```java
+import java.util.Scanner;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        //输入n，m
+        int n = scanner.nextInt();
+        int m = scanner.nextInt();
+        //定义总和sum以及二维数组vec用于表示土地总价值以及每一块土地的价值
+        int sum = 0;
+        int[][] vec = new int[n][m];
+        //遍历求总和
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < m; j++) {
+                vec[i][j] = scanner.nextInt();
+                sum += vec[i][j];
+            }
+        }
+
+        // 统计横向每一行的和
+        int[] horizontal = new int[n];
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < m; j++) {
+                horizontal[i] += vec[i][j];
+            }
+        }
+
+        // 统计纵向每一列的和
+        int[] vertical = new int[m];
+        for (int j = 0; j < m; j++) {
+            for (int i = 0; i < n; i++) {
+                vertical[j] += vec[i][j];
+            }
+        }
+
+        int result = Integer.MAX_VALUE;
+        //横向切分，第一刀划到0行和1行中间(以此类推)，至于result的取法，为什么是Math.min(result, Math.abs(sum - 2 * horizontalCut))
+        //因为最理想的情况下，一刀下去，两片土地面积相等，所以2*其中一片的面积和总和取差值的绝对值，就能算出两块土地之间的差距大小，从而求出最优解
+        int horizontalCut = 0;
+        for (int i = 0; i < n; i++) {
+            horizontalCut += horizontal[i];
+            result = Math.min(result, Math.abs(sum - 2 * horizontalCut));
+        }
+        //纵向切分，第一刀划到0列和1列中间(以此类推)
+        int verticalCut = 0;
+        for (int j = 0; j < m; j++) {
+            verticalCut += vertical[j];
+            result = Math.min(result, Math.abs(sum - 2 * verticalCut));
+        }
+
+        System.out.println(result);
+        scanner.close();
+    }
+}
+```
+
+# 总结
+
+数组篇的二刷就大概到这里，后续计划是边二刷其他章节的题目，边刷力扣hot100以及牛客大厂笔试真题
+
+Last update : 08-08-2024

@@ -1,0 +1,482 @@
+---
+title: "代码随想录二刷记录-字符串篇"
+description: "为了准备秋招笔试，二刷代码随想录的题目，并将解答过程记录"
+pubDate: "08 11 2024"
+categories:
+  - tech
+tags:
+  - 算法
+---
+
+# 题一、反转字符串
+
+力扣链接: https://leetcode.cn/problems/reverse-string/
+
+## 题目描述
+
+编写一个函数，其作用是将输入的字符串反转过来。输入字符串以字符数组 char[] 的形式给出。
+
+不要给另外的数组分配额外的空间，你必须原地修改输入数组、使用 O(1) 的额外空间解决这一问题
+
+### 思路
+
+双指针解法，left从头开始，right从尾部开始，逐个交换即可
+
+**用异或来交换数据(用temp来交换也可以)**
+```java
+class Solution {
+    public void reverseString(char[] s) {
+        int l = 0;
+        int r = s.length - 1;
+        while (l < r) {
+            s[l] ^= s[r];  //构造 a ^ b 的结果，并放在 a 中
+            s[r] ^= s[l];  //将 a ^ b 这一结果再 ^ b ，存入b中，此时 b = a, a = a ^ b
+            s[l] ^= s[r];  //a ^ b 的结果再 ^ a ，存入 a 中，此时 b = a, a = b 完成交换
+            l++;
+            r--;
+        }
+    }
+}
+```
+
+# 题二、反转字符串II
+
+力扣链接:https://leetcode.cn/problems/reverse-string-ii/description/
+
+## 题目描述
+
+给定一个字符串 s 和一个整数 k，从字符串开头算起, 每计数至**2k**个字符，就反转这 2k 个字符中的前 k 个字符。
+
+如果剩余字符少于 k 个，则将剩余字符全部反转。
+
+如果剩余字符小于 2k 但大于或等于 k 个，则反转前 k 个字符，其余字符保持原样。
+
+示例:
+
+输入: s = "abcdefg", k = 2
+
+输出: "bacdfeg"
+
+### 思路
+
+让指针每次移动2k个元素，然后再反转前k个元素，最后遇到不足k个元素的时候全部反转
+
+```java
+class Solution {
+    public String reverseStr(String s, int k) {
+        char[] ch = s.toCharArray();
+        for(int i = 0; i < ch.length; i += 2 * k){
+            int start = i;
+            //这里是判断尾数够不够k个来取决end指针的位置
+            int end = Math.min(ch.length - 1, start + k - 1);
+            //用异或运算反转 
+            while(start < end){
+                ch[start] ^= ch[end];
+                ch[end] ^= ch[start];
+                ch[start] ^= ch[end];
+                start++;
+                end--;
+            }
+        }
+        return new String(ch);
+    }
+}
+```
+
+# 题三、替换数字
+
+卡码网链接:https://kamacoder.com/problempage.php?pid=1064
+
+## 题目描述
+
+给定一个字符串 s，它包含小写字母和数字字符，请编写一个函数，将字符串中的字母字符保持不变，而将每个数字字符替换为number。
+
+例如，对于输入字符串 "a1b2c3"，函数应该将其转换为 "anumberbnumbercnumber"。
+
+对于输入字符串 "a5b"，函数应该将其转换为 "anumberb"
+
+输入：一个字符串 s,s 仅包含小写字母和数字字符。
+
+输出：打印一个新的字符串，其中每个数字字符都被替换为了number
+
+样例输入：a1b2c3
+
+样例输出：anumberbnumbercnumber
+
+### 思路
+
+从后向前替换数字字符，也就是双指针法，过程如下：i指向新长度的末尾，j指向旧长度的末尾
+
+<image src="https://code-thinking-1253855093.file.myqcloud.com/pics/20231030173058.png"/>
+
+从前向后填充就是O(n^2)的算法了，因为每次添加元素都要将添加元素之后的所有元素整体向后移动。
+
+**其实很多数组填充类的问题，其做法都是先预先给数组扩容带填充后的大小，然后在从后向前进行操作**
+
+这么做有两个好处：
+
+1. 不用申请新数组
+
+2. 从后向前填充元素，避免了从前向后填充元素时，每次添加元素都要将添加元素之后的所有元素向后移动的问题
+
+```java
+import java.util.Scanner;
+
+public class Main {
+    
+    public static String replaceNumber(String s) {
+        int count = 0; // 统计数字的个数
+        int sOldSize = s.length();
+        for (int i = 0; i < s.length(); i++) {
+            if(Character.isDigit(s.charAt(i))){
+                count++;
+            }
+        }
+        // 扩充字符串s的大小，也就是每个空格替换成"number"之后的大小
+        char[] newS = new char[s.length() + count * 5];
+        int sNewSize = newS.length;
+        // 将旧字符串的内容填入新数组
+        System.arraycopy(s.toCharArray(), 0, newS, 0, sOldSize);
+        // 从后先前将空格替换为"number"
+        for (int i = sNewSize - 1, j = sOldSize - 1; j < i; j--, i--) {
+            if (!Character.isDigit(newS[j])) {
+                newS[i] = newS[j];
+            } else {
+                newS[i] = 'r';
+                newS[i - 1] = 'e';
+                newS[i - 2] = 'b';
+                newS[i - 3] = 'm';
+                newS[i - 4] = 'u';
+                newS[i - 5] = 'n';
+                i -= 5;
+            }
+        }
+        return new String(newS);
+    };
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        String s = scanner.next();
+        System.out.println(replaceNumber(s));
+        scanner.close();
+    }
+}
+```
+
+# 题四、翻转字符串里的单词
+
+力扣链接:https://leetcode.cn/problems/reverse-words-in-a-string/description/
+
+## 题目描述
+
+给定一个字符串，逐个翻转字符串中的每个单词
+
+示例 1:
+
+输入: "  hello world!  "
+
+输出: "world! hello"
+
+解释: 输入字符串可以在前面或者后面包含多余的空格，但是反转后的字符不能包括
+
+示例 2:
+
+输入: "a good   example"
+
+输出: "example good a"
+
+解释: 如果两个单词间有多余的空格，将反转后单词间的空格减少到只含一个
+
+### 思路
+
+解题步骤:
+
+1. 移除不必要的空格
+
+2. 反转整个字符串
+
+3. 反转每个单词
+
+```java
+class Solution {
+   /**
+     * 不使用Java内置方法实现
+     * <p>
+     * 1.去除首尾以及中间多余空格
+     * 2.反转整个字符串
+     * 3.反转各个单词
+     */
+    public String reverseWords(String s) {
+        // System.out.println("ReverseWords.reverseWords2() called with: s = [" + s + "]");
+        // 1.去除首尾以及中间多余空格
+        StringBuilder sb = removeSpace(s);
+        // 2.反转整个字符串
+        reverseString(sb, 0, sb.length() - 1);
+        // 3.反转各个单词
+        reverseEachWord(sb);
+        return sb.toString();
+    }
+
+    private StringBuilder removeSpace(String s) {
+        // System.out.println("ReverseWords.removeSpace() called with: s = [" + s + "]");
+        int start = 0;
+        int end = s.length() - 1;
+        while (s.charAt(start) == ' ') start++;
+        while (s.charAt(end) == ' ') end--;
+        StringBuilder sb = new StringBuilder();
+        while (start <= end) {
+            char c = s.charAt(start);
+            if (c != ' ' || sb.charAt(sb.length() - 1) != ' ') {
+                sb.append(c);
+            }
+            start++;
+        }
+        // System.out.println("ReverseWords.removeSpace returned: sb = [" + sb + "]");
+        return sb;
+    }
+
+    /**
+     * 反转字符串指定区间[start, end]的字符
+     */
+    public void reverseString(StringBuilder sb, int start, int end) {
+        // System.out.println("ReverseWords.reverseString() called with: sb = [" + sb + "], start = [" + start + "], end = [" + end + "]");
+        while (start < end) {
+            char temp = sb.charAt(start);
+            sb.setCharAt(start, sb.charAt(end));
+            sb.setCharAt(end, temp);
+            start++;
+            end--;
+        }
+        // System.out.println("ReverseWords.reverseString returned: sb = [" + sb + "]");
+    }
+
+    private void reverseEachWord(StringBuilder sb) {
+        int start = 0;
+        int end = 1;
+        int n = sb.length();
+        while (start < n) {
+            while (end < n && sb.charAt(end) != ' ') {
+                end++;
+            }
+            reverseString(sb, start, end - 1);
+            start = end + 1;
+            end = start + 1;
+        }
+    }
+}
+```
+
+# 题五、右旋字符串
+
+卡码网链接:https://kamacoder.com/problempage.php?pid=1065
+
+## 题目描述
+
+字符串的右旋转操作是把字符串尾部的若干个字符转移到字符串的前面。给定一个字符串 s 和一个正整数 k，请编写一个函数，将字符串中的后面 k 个字符移到字符串的前面，实现字符串的右旋转操作。
+
+例如，对于输入字符串 "abcdefg" 和整数 2，函数应该将其转换为 "fgabcde"。
+
+输入：输入共包含两行，第一行为一个正整数 k，代表右旋转的位数。第二行为字符串 s，代表需要旋转的字符串。
+
+输出：输出共一行，为进行了右旋转操作后的字符串。
+
+### 思路
+
+解法一:先整体反转再局部反转
+
+<image src="https://code-thinking-1253855093.file.myqcloud.com/pics/20231106172058.png"/>
+
+解法二:先局部再整体
+
+<image src="https://code-thinking-1253855093.file.myqcloud.com/pics/20231106172534.png"/>
+
+```java
+// 版本一
+import java.util.Scanner;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner in = new Scanner(System.in);
+        int n = Integer.parseInt(in.nextLine());
+        String s = in.nextLine();
+
+        int len = s.length();  //获取字符串长度
+        char[] chars = s.toCharArray();
+        reverseString(chars, 0, len - 1);  //反转整个字符串
+        reverseString(chars, 0, n - 1);  //反转前一段字符串，此时的字符串首尾尾是0,n - 1
+        reverseString(chars, n, len - 1);  //反转后一段字符串，此时的字符串首尾尾是n,len - 1
+        
+        System.out.println(chars);
+
+    }
+
+    public static void reverseString(char[] ch, int start, int end) {
+        //异或法反转字符串，参照题目 344.反转字符串的解释
+        while (start < end) {
+            ch[start] ^= ch[end];
+            ch[end] ^= ch[start];
+            ch[start] ^= ch[end];
+            start++;
+            end--;
+        }
+    }
+}
+```
+
+```java
+// 版本二
+import java.util.Scanner;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner in = new Scanner(System.in);
+        int n = Integer.parseInt(in.nextLine());
+        String s = in.nextLine();
+
+        int len = s.length();  //获取字符串长度
+        char[] chars = s.toCharArray();
+        reverseString(chars, 0, len - n - 1);  //反转前一段字符串，此时的字符串首尾是0,len - n - 1
+        reverseString(chars, len - n, len - 1);  //反转后一段字符串，此时的字符串首尾是len - n,len - 1
+        reverseString(chars, 0, len - 1);  //反转整个字符串
+
+        System.out.println(chars);
+
+    }
+
+    public static void reverseString(char[] ch, int start, int end) {
+        //异或法反转字符串，参照题目 344.反转字符串的解释
+        while (start < end) {
+            ch[start] ^= ch[end];
+            ch[end] ^= ch[start];
+            ch[start] ^= ch[end];
+            start++;
+            end--;
+        }
+    }
+}
+```
+
+# 题六、实现strStr()
+
+力扣链接:https://leetcode.cn/problems/implement-strstr/
+
+## 题目描述
+
+实现 strStr() 函数。
+
+给你两个字符串 haystack 和 needle ，请你在 haystack 字符串中找出 needle 字符串出现的第一个位置（下标从 0 开始）。如果不存在，则返回  -1 。
+
+示例 1: 输入: haystack = "hello", needle = "ll" 输出: 2
+
+示例 2: 输入: haystack = "aaaaa", needle = "bba" 输出: -1
+
+说明: 当 needle 是空字符串时，我们应当返回什么值呢？这是一个在面试中很好的问题。 对于本题而言，当 needle 是空字符串时我们应当返回 0 。这与C语言的 strstr() 以及 Java的 indexOf() 定义相符
+
+### 思路
+
+利用KMP算法求解
+
+```java
+// 方法一
+class Solution {
+    public void getNext(int[] next, String s){
+        int j = -1;
+        next[0] = j;
+        for (int i = 1; i < s.length(); i++){
+            while(j >= 0 && s.charAt(i) != s.charAt(j+1)){
+                j=next[j];
+            }
+
+            if(s.charAt(i) == s.charAt(j+1)){
+                j++;
+            }
+            next[i] = j;
+        }
+    }
+    public int strStr(String haystack, String needle) {
+        if(needle.length()==0){
+            return 0;
+        }
+
+        int[] next = new int[needle.length()];
+        getNext(next, needle);
+        int j = -1;
+        for(int i = 0; i < haystack.length(); i++){
+            while(j>=0 && haystack.charAt(i) != needle.charAt(j+1)){
+                j = next[j];
+            }
+            if(haystack.charAt(i) == needle.charAt(j+1)){
+                j++;
+            }
+            if(j == needle.length()-1){
+                return (i-needle.length()+1);
+            }
+        }
+
+        return -1;
+    }
+}
+```
+
+# 题七、重复的子字符串
+
+力扣链接:https://leetcode.cn/problems/repeated-substring-pattern/description/
+
+## 题目描述
+
+给定一个非空的字符串，判断它是否可以由它的一个子串重复多次构成。给定的字符串只含有小写英文字母，并且长度不超过10000。
+
+示例 1:
+
+输入: "abab"
+
+输出: True
+
+解释: 可由子字符串 "ab" 重复两次构成。
+
+示例 2:
+
+输入: "aba"
+
+输出: False
+
+### 思路
+
+跟上一题差不多的KMP算法
+
+```java
+class Solution {
+    public boolean repeatedSubstringPattern(String s) {
+        if (s.equals("")) return false;
+
+        int len = s.length();
+        // 原串加个空格(哨兵)，使下标从1开始，这样j从0开始，也不用初始化了
+        s = " " + s;
+        char[] chars = s.toCharArray();
+        int[] next = new int[len + 1];
+
+        // 构造 next 数组过程，j从0开始(空格)，i从2开始
+        for (int i = 2, j = 0; i <= len; i++) {
+            // 匹配不成功，j回到前一位置 next 数组所对应的值
+            while (j > 0 && chars[i] != chars[j + 1]) j = next[j];
+            // 匹配成功，j往后移
+            if (chars[i] == chars[j + 1]) j++;
+            // 更新 next 数组的值
+            next[i] = j;
+        }
+
+        // 最后判断是否是重复的子字符串，这里 next[len] 即代表next数组末尾的值
+        if (next[len] > 0 && len % (len - next[len]) == 0) {
+            return true;
+        }
+        return false;
+    }
+}
+```
+
+# 总结
+
+字符串篇的二刷就大概到这里，后续计划是边二刷其他章节的题目，边刷力扣hot100以及牛客大厂笔试真题
+
+还是需要对KMP算法进行详细理解，因为太久没碰了，生疏
+
+Last update : 08-11-2024

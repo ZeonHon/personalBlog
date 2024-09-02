@@ -1,0 +1,599 @@
+---
+title: "代码随想录二刷记录-链表篇"
+description: "为了准备秋招笔试，二刷代码随想录的题目，并将解答过程记录"
+pubDate: "08 08 2024"
+categories:
+  - tech
+tags:
+  - 算法
+---
+
+# 前言
+
+Java中定义一个链表的代码如下:
+
+```java
+public class ListNode {
+    // 结点的值
+    int val;
+
+    // 下一个结点
+    ListNode next;
+
+    // 节点的构造函数(无参)
+    public ListNode() {
+    }
+
+    // 节点的构造函数(有一个参数)
+    public ListNode(int val) {
+        this.val = val;
+    }
+
+    // 节点的构造函数(有两个参数)
+    public ListNode(int val, ListNode next) {
+        this.val = val;
+        this.next = next;
+    }
+}
+```
+
+# 题一、移除链表元素
+
+力扣链接:https://leetcode.cn/problems/remove-linked-list-elements/description/
+
+## 题目描述
+
+题意：删除链表中等于给定值 val 的所有节点。
+
+示例 1： 输入：head = [1,2,6,3,4,5,6], val = 6 输出：[1,2,3,4,5]
+
+示例 2： 输入：head = [], val = 1 输出：[]
+
+示例 3： 输入：head = [7,7,7,7], val = 7 输出：[]
+
+### 思路
+
+普通情况下的移除操作，只需要让next指针指向下一个节点即可;
+
+但是要是移除的是头节点呢？
+
+这里就涉及如下链表操作的两种方式：(推荐使用虚拟头节点)
+
+- **直接使用原来的链表来进行删除操作**
+- **设置一个虚拟头结点在进行删除操作**
+
+#### 设置虚拟头节点
+
+```java
+/**
+ * 时间复杂度 O(n)
+ * 空间复杂度 O(1)
+ * @param head
+ * @param val
+ * @return
+ */
+public ListNode removeElements(ListNode head, int val) {
+    // 设置一个虚拟的头结点
+    ListNode dummy = new ListNode();
+    dummy.next = head;
+
+    ListNode cur = dummy;
+    while (cur.next != null) {
+        if (cur.next.val == val) {
+            cur.next = cur.next.next;
+        } else {
+            cur = cur.next;        
+        }
+    }
+    return dummy.next;
+}
+```
+
+#### 直接使用原来的链表
+
+```java
+/**
+ * 方法1
+ * 时间复杂度 O(n)
+ * 空间复杂度 O(1)
+ * @param head
+ * @param val
+ * @return
+ */
+public ListNode removeElements(ListNode head, int val) {
+    while(head!=null && head.val==val) {
+        head = head.next;
+    }
+    ListNode curr = head;
+    while(curr!=null && curr.next !=null) {
+        if(curr.next.val == val){
+            curr.next = curr.next.next;
+        } else {
+            curr = curr.next;
+        }
+    }
+    return head;
+}
+
+/**
+ * 方法2
+ * 时间复杂度 O(n)
+ * 空间复杂度 O(1)
+ * @param head
+ * @param val
+ * @return
+ */
+public ListNode removeElements(ListNode head, int val) {
+    while (head != null && head.val == val) {
+        head = head.next;
+    }
+    // 已经为null，提前退出
+    if (head == null) {
+        return head;
+    }
+    // 已确定当前head.val != val
+    ListNode pre = head;
+    ListNode cur = head.next;
+    while (cur != null) {
+        if (cur.val == val) {
+            pre.next = cur.next;
+        } else {
+            pre = cur;
+        }
+        cur = cur.next;
+    }
+    return head;
+}
+```
+
+# 题二、设计链表
+
+力扣链接:https://leetcode.cn/problems/design-linked-list/description/
+
+## 题目描述
+
+在链表类中实现这些功能：
+
+- get(index)：获取链表中第 index 个节点的值。如果索引无效，则返回-1
+- addAtHead(val)：在链表的第一个元素之前添加一个值为 val 的节点。插入后，新节点将成为链表的第一个节点
+- addAtTail(val)：将值为 val 的节点追加到链表的最后一个元素
+- addAtIndex(index,val)：在链表中的第 index 个节点之前添加值为 val  的节点。如果 index 等于链表的长度，则该节点将附加到链表的末尾。如果 index 大于链表长度，则不会插入节点。如果index小于0，则在头部插入节点
+- deleteAtIndex(index)：如果索引 index 有效，则删除链表中的第 index 个节点
+
+实现代码如下（无难度，练手掌握基础的题）:
+
+```java
+//单链表
+class ListNode {
+    int val;
+    ListNode next;
+    ListNode(){}
+    ListNode(int val) {
+        this.val=val;
+    }
+}
+class MyLinkedList {
+    //size存储链表元素的个数
+    int size;
+    //虚拟头结点
+    ListNode head;
+
+    //初始化链表
+    public MyLinkedList() {
+        size = 0;
+        head = new ListNode(0);
+    }
+
+    //获取第index个节点的数值，注意index是从0开始的，第0个节点就是头结点
+    public int get(int index) {
+        //如果index非法，返回-1
+        if (index < 0 || index >= size) {
+            return -1;
+        }
+        ListNode currentNode = head;
+        //包含一个虚拟头节点，所以查找第 index+1 个节点
+        for (int i = 0; i <= index; i++) {
+            currentNode = currentNode.next;
+        }
+        return currentNode.val;
+    }
+
+    public void addAtHead(int val) {
+        ListNode newNode = new ListNode(val);
+        newNode.next = head.next;
+        head.next = newNode;
+        size++;
+
+        // 在链表最前面插入一个节点，等价于在第0个元素前添加
+        // addAtIndex(0, val);
+    }
+
+    
+    public void addAtTail(int val) {
+        ListNode newNode = new ListNode(val);
+        ListNode cur = head;
+        while (cur.next != null) {
+            cur = cur.next;
+        }
+
+        cur.next = newNode;
+        size++;
+
+        // 在链表的最后插入一个节点，等价于在(末尾+1)个元素前添加
+        // addAtIndex(size, val);
+    }
+
+    // 在第 index 个节点之前插入一个新节点，例如index为0，那么新插入的节点为链表的新头节点。
+    // 如果 index 等于链表的长度，则说明是新插入的节点为链表的尾结点
+    // 如果 index 大于链表的长度，则返回空
+    public void addAtIndex(int index, int val) {
+        if (index > size) {
+            return;
+        }
+        if (index < 0) {
+            index = 0;
+        }
+        size++;
+        //找到要插入节点的前驱
+        ListNode pred = head;
+        for (int i = 0; i < index; i++) {
+            pred = pred.next;
+        }
+        ListNode toAdd = new ListNode(val);
+        toAdd.next = pred.next;
+        pred.next = toAdd;
+    }
+
+    //删除第index个节点
+    public void deleteAtIndex(int index) {
+        if (index < 0 || index >= size) {
+            return;
+        }
+        size--;
+        //因为有虚拟头节点，所以不用对Index=0的情况进行特殊处理
+        ListNode pred = head;
+        for (int i = 0; i < index ; i++) {
+            pred = pred.next;
+        }
+        pred.next = pred.next.next;
+    }
+}
+```
+
+# 题三、翻转链表
+
+力扣链接:https://leetcode.cn/problems/reverse-linked-list/description/
+
+## 题目描述
+
+题意：反转一个单链表。
+
+示例: 输入: 1->2->3->4->5->NULL 输出: 5->4->3->2->1->NULL
+
+### 思路
+
+原地翻转，不造成多余的空间开销
+
+<image src="https://code-thinking.cdn.bcebos.com/gifs/206.%E7%BF%BB%E8%BD%AC%E9%93%BE%E8%A1%A8.gif"/>
+
+```java
+// 双指针
+class Solution {
+    public ListNode reverseList(ListNode head) {
+        ListNode prev = null;
+        ListNode cur = head;
+        ListNode temp = null;
+        while (cur != null) {
+            temp = cur.next;// 保存下一个节点
+            cur.next = prev;
+            prev = cur;
+            cur = temp;
+        }
+        return prev;
+    }
+}
+```
+
+# 题四、两两交换链表的节点
+
+力扣链接:https://leetcode.cn/problems/swap-nodes-in-pairs/description/
+
+## 题目描述
+
+给定一个链表，两两交换其中相邻的节点，并返回交换后的链表。
+
+你不能只是单纯的改变节点内部的值，而是需要实际的进行节点交换。
+
+示例: 输入: 1->2->3->4->NULL 输出: 2->1->4->3->NULL
+
+### 思路
+
+<image src="https://code-thinking.cdn.bcebos.com/pics/24.%E4%B8%A4%E4%B8%A4%E4%BA%A4%E6%8D%A2%E9%93%BE%E8%A1%A8%E4%B8%AD%E7%9A%84%E8%8A%82%E7%82%B91.png"/>
+
+操作之后:
+
+<image src="https://code-thinking.cdn.bcebos.com/pics/24.%E4%B8%A4%E4%B8%A4%E4%BA%A4%E6%8D%A2%E9%93%BE%E8%A1%A8%E4%B8%AD%E7%9A%84%E8%8A%82%E7%82%B92.png"/>
+
+```java
+class Solution {
+  public ListNode swapPairs(ListNode head) {
+        ListNode dumyhead = new ListNode(-1); // 设置一个虚拟头结点
+        dumyhead.next = head; // 将虚拟头结点指向head，这样方便后面做删除操作
+        ListNode cur = dumyhead;
+        ListNode temp; // 临时节点，保存两个节点后面的节点
+        ListNode firstnode; // 临时节点，保存两个节点之中的第一个节点
+        ListNode secondnode; // 临时节点，保存两个节点之中的第二个节点
+        while (cur.next != null && cur.next.next != null) {
+            temp = cur.next.next.next;
+            firstnode = cur.next;
+            secondnode = cur.next.next;
+            cur.next = secondnode;       // 步骤一
+            secondnode.next = firstnode; // 步骤二
+            firstnode.next = temp;      // 步骤三
+            cur = firstnode; // cur移动，准备下一轮交换
+        }
+        return dumyhead.next;  
+    }
+}
+```
+
+另一种写法:
+```java
+// 将步骤 2,3 交换顺序，这样不用定义 temp 节点
+public ListNode swapPairs(ListNode head) {
+    ListNode dummy = new ListNode(0, head);
+    ListNode cur = dummy;
+    while (cur.next != null && cur.next.next != null) {
+        ListNode node1 = cur.next;// 第 1 个节点
+        ListNode node2 = cur.next.next;// 第 2 个节点
+        cur.next = node2; // 步骤 1
+        node1.next = node2.next;// 步骤 3
+        node2.next = node1;// 步骤 2
+        cur = cur.next.next;
+    }
+    return dummy.next;
+}
+```
+
+# 题五、删除链表的倒数第N个节点
+
+力扣链接:https://leetcode.cn/problems/remove-nth-node-from-end-of-list/description/
+
+## 题目描述
+
+给你一个链表，删除链表的倒数第 n 个结点，并且返回链表的头结点。
+
+进阶：你能尝试使用一趟扫描实现吗？
+
+示例 1：
+
+输入：head = [1], n = 1 输出：[]
+
+示例 2：
+
+输入：head = [1,2], n = 1 输出：[1]
+
+### 思路
+
+双指针的经典应用，如果要删除倒数第n个节点，**让fast移动n步，然后让fast和slow同时移动，直到fast指向链表末尾。删掉slow所指向的节点就可以了**
+
+如图所示:(图片摘自代码随想录)
+
+<image src="https://code-thinking.cdn.bcebos.com/pics/19.%E5%88%A0%E9%99%A4%E9%93%BE%E8%A1%A8%E7%9A%84%E5%80%92%E6%95%B0%E7%AC%ACN%E4%B8%AA%E8%8A%82%E7%82%B9.png"/>
+
+- fast先走n+1步，这样子slow指针最后会指到需要删除的节点的上一个节点，方便进行删除操作
+
+- slow和fast同时移动，直到fast指向末尾
+
+- 删除slow的下一个节点
+
+```java
+class Solution {
+    public ListNode removeNthFromEnd(ListNode head, int n) {
+        //新建一个虚拟头节点指向head
+        ListNode dummyNode = new ListNode(0 , head);
+        //快慢指针指向虚拟头节点
+        ListNode fastIndex = dummyNode;
+        ListNode slowIndex = dummyNode;
+
+        // 只要快慢指针相差 n 个结点即可,fastIndex先走n+1步
+        for (int i = 0; i <= n; i++) {
+            fastIndex = fastIndex.next;
+        }
+        //两个指针同时走
+        while (fastIndex != null) {
+            fastIndex = fastIndex.next;
+            slowIndex = slowIndex.next;
+        }
+
+        // 此时 slowIndex 的位置就是待删除元素的前一个位置。
+        // 具体情况可自己画一个链表长度为 3 的图来模拟代码来理解
+        // 检查 slowIndex.next 是否为 null，以避免空指针异常
+        if (slowIndex.next != null) {
+            slowIndex.next = slowIndex.next.next;
+        }
+        return dummyNode.next;
+    }
+}
+```
+
+# 题六、链表相交
+
+力扣链接:https://leetcode.cn/problems/intersection-of-two-linked-lists/description/
+
+## 题目描述
+
+给你两个单链表的头节点 headA 和 headB ，请你找出并返回两个单链表相交的起始节点。如果两个链表没有交点，返回 null
+
+题目数据 保证 整个链式结构中不存在环。
+
+注意，函数返回结果后，链表必须 保持其原始结构
+
+### 思路
+
+简单来说，就是求两个链表交点节点的指针。 这里要注意，交点不是数值相等，而是指针相等(即后面指的所有元素也是相等的)
+
+- 我们求出两个链表的长度，并求出两个链表长度的差值，然后让curA移动到，和curB 末尾对齐的位置
+
+- 此时我们就可以比较curA和curB是否相同，如果不相同，同时向后移动curA和curB，如果遇到curA == curB，则找到交点
+
+<image src="https://code-thinking.cdn.bcebos.com/pics/%E9%9D%A2%E8%AF%95%E9%A2%9802.07.%E9%93%BE%E8%A1%A8%E7%9B%B8%E4%BA%A4_2.png"/>
+
+```java
+(版本一)先行移动长链表实现同步移动
+public class Solution {
+    public ListNode getIntersectionNode(ListNode headA, ListNode headB) {
+        ListNode curA = headA;
+        ListNode curB = headB;
+        int lenA = 0, lenB = 0;
+        while (curA != null) { // 求链表A的长度
+            lenA++;
+            curA = curA.next;
+        }
+        while (curB != null) { // 求链表B的长度
+            lenB++;
+            curB = curB.next;
+        }
+        curA = headA;
+        curB = headB;
+        // 让curA为最长链表的头，lenA为其长度
+        if (lenB > lenA) {
+            //1. swap (lenA, lenB);
+            int tmpLen = lenA;
+            lenA = lenB;
+            lenB = tmpLen;
+            //2. swap (curA, curB);
+            ListNode tmpNode = curA;
+            curA = curB;
+            curB = tmpNode;
+        }
+        // 求长度差
+        int gap = lenA - lenB;
+        // 让curA和curB在同一起点上（末尾位置对齐）
+        while (gap-- > 0) {
+            curA = curA.next;
+        }
+        // 遍历curA 和 curB，遇到相同则直接返回
+        while (curA != null) {
+            if (curA == curB) {
+                return curA;
+            }
+            curA = curA.next;
+            curB = curB.next;
+        }
+        return null;
+    }
+}
+```
+
+版本二:
+```java
+(版本二) 合并链表实现同步移动
+public class Solution {
+    public ListNode getIntersectionNode(ListNode headA, ListNode headB) {
+		// p1 指向 A 链表头结点，p2 指向 B 链表头结点
+		ListNode p1 = headA, p2 = headB;
+		while (p1 != p2) {
+			// p1 走一步，如果走到 A 链表末尾，转到 B 链表
+			if (p1 == null) p1 = headB;
+			else            p1 = p1.next;
+			// p2 走一步，如果走到 B 链表末尾，转到 A 链表
+			if (p2 == null) p2 = headA;
+			else            p2 = p2.next;
+		}
+		return p1;
+    }
+}
+```
+
+# 题七、环形链表II
+
+力扣链接:https://leetcode.cn/problems/linked-list-cycle-ii/description/
+
+## 题目描述
+
+给定一个链表的头节点  head ，返回链表开始入环的第一个节点。 如果链表无环，则返回 null。
+
+为了表示给定链表中的环，使用整数 pos 来表示链表尾连接到链表中的位置（索引从 0 开始）。 如果 pos 是 -1，则在该链表中没有环
+
+### 思路
+
+**判断链表是否有环**
+
+可以使用快慢指针法，分别定义 fast 和 slow 指针，从头结点出发，fast指针每次移动两个节点，slow指针每次移动一个节点，如果 fast 和 slow指针在途中相遇 ，说明这个链表有环
+
+首先第一点：**fast指针一定先进入环中，如果fast指针和slow指针相遇的话，一定是在环中相遇**，这是毋庸置疑的
+
+因为fast是走两步，slow是走一步，其实相对于slow来说，fast是一个节点一个节点的靠近slow的，所以fast一定可以和slow重合
+
+<image src="https://code-thinking.cdn.bcebos.com/gifs/141.%E7%8E%AF%E5%BD%A2%E9%93%BE%E8%A1%A8.gif"/>
+
+**如果有环，如何找到这个环的入口**
+
+此时已经可以判断链表是否有环了，那么接下来要找这个环的入口了
+
+假设从头结点到环形入口节点 的节点数为x。 环形入口节点到 fast指针与slow指针相遇节点 节点数为y。 从相遇节点 再到环形入口节点节点数为 z
+
+<image src="https://code-thinking-1253855093.file.myqcloud.com/pics/20220925103433.png"/>
+
+那么相遇时： slow指针走过的节点数为: x + y， fast指针走过的节点数：x + y + n (y + z)，n为fast指针在环内走了n圈才遇到slow指针
+
+因为fast指针是一步走两个节点，slow指针一步走一个节点， 所以 fast指针走过的节点数 = slow指针走过的节点数 * 2：
+
+> (x + y) * 2 = x + y + n (y + z)
+
+整理公式之后为如下公式:
+
+> x = (n - 1) (y + z) + z
+
+这个公式说明什么呢？
+
+先拿n为1的情况来举例，意味着fast指针在环形里转了一圈之后，就遇到了 slow指针了。
+
+当 n为1的时候，公式就化解为 x = z
+
+这就意味着，**从头结点出发一个指针，从相遇节点也出发一个指针，这两个指针每次只走一个节点， 那么当这两个指针相遇的时候就是环形入口的节点**
+
+也就是在相遇节点处，定义一个指针index1，在头结点处定一个指针index2。
+
+让index1和index2同时移动，每次移动一个节点， 那么他们相遇的地方就是环形入口的节点
+
+<image src="https://code-thinking.cdn.bcebos.com/gifs/142.%E7%8E%AF%E5%BD%A2%E9%93%BE%E8%A1%A8II%EF%BC%88%E6%B1%82%E5%85%A5%E5%8F%A3%EF%BC%89.gif"/>
+
+```java
+public class Solution {
+    public ListNode detectCycle(ListNode head) {
+        ListNode slow = head;
+        ListNode fast = head;
+        while (fast != null && fast.next != null) {
+            slow = slow.next;
+            fast = fast.next.next;
+            if (slow == fast) {// 有环
+                ListNode index1 = fast;
+                ListNode index2 = head;
+                // 两个指针，从头结点和相遇结点，各走一步，直到相遇，相遇点即为环入口
+                while (index1 != index2) {
+                    index1 = index1.next;
+                    index2 = index2.next;
+                }
+                return index1;
+            }
+        }
+        return null;
+    }
+}
+```
+
+# 总结
+
+链表篇的二刷就大概到这里，后续计划是边二刷其他章节的题目，边刷力扣hot100以及牛客大厂笔试真题
+
+Last update : 08-09-2024
+
+
+
+
+
+
+
+

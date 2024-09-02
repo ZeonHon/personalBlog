@@ -1,0 +1,204 @@
+---
+title: "秋招-bilibili 2024-0821Java笔试"
+description: "08-21-2024 bilibili秋招Java方向笔试大题3道的解答"
+pubDate: "08 21 2024"
+categories:
+  - tech
+tags:
+  - 算法
+  - 秋招
+---
+
+# 前言
+
+0821晚19:00 - 20:00，bilibili的秋招Java方向的笔试
+
+一共20道单选题，5道不定向选择，3道编程题
+
+# 题目一:改变多少次可以得到相同字符串（具体名字不记得了，大概是这样的）
+
+## 题目描述（大概是这个意思）
+
+给你一个**长度为偶数**的字符串s，例如"abhgbh"，请问最少需要改变其中的字符多少次才能使其变成两个相同的字符串？
+
+示例:
+
+输入：s = "abhgbh"
+输出：1
+原因：只需要把g改成a即可
+
+输入：s = "abhabh"
+输出：0
+原因：这已经是一个由两个相同的abh构成的字符串了
+
+### 代码实现
+
+通过率100%
+
+```java
+import java.util.*;
+
+public class Main {
+  public static void main(String[] args) {
+      Scanner sc = new Scanner(System.in);
+      String s = sc.nextLine();
+      int count = 0;
+      for (int i = 0 , j = 0; i < s.length() / 2; i++ , j++) {
+          if (s.charAt(i) != s.charAt(s.length() / 2 + j)) {
+              count++;
+          }
+      }
+      System.out.println(count);
+  }
+}
+```
+
+# 题目二:判断一个由符号()组成的字符串的合法前缀长度
+
+## 题目描述
+
+给定一个由符号()组成的字符串s，例如"((()))"，请返回s中合法前缀的长度(空串也是合法的)
+
+合法前缀的定义是：
+
+1. 括号必须成对出现，且每个左括号必须有对应的右括号。
+
+2. 括号必须按照正确的顺序出现，即左括号必须先出现，右括号必须后出现
+
+### 代码实现
+
+通过率90%（刚刚复盘发现有一些漏洞，所以只有90%的通过率，下面给出的代码已修改过，应该有100%）
+
+思路：和有效括号那道题差不多的思路，定义一个计数器用来统计合法前缀的数量，遇到左括号则入栈其对应的右括号，同时计时器加一
+
+遇到右括号则出栈，同时计时器加一（如果栈为空或者不匹配的话则直接退出即可）
+
+```java
+//最开始的写法，通过率90%
+import java.util.*;
+
+public class Main {
+   public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        int n = sc.nextInt();
+        String a = sc.nextLine(); //这个是用来输入完字符串长度之后的换行符,不然会没输出（被这个卡了一下）
+        String s = sc.nextLine(); //这个才是我们输入的字符串
+
+        Deque<Character> deque = new LinkedList<>();
+        int count = 0;
+        char ch;
+        if(n == 0) System.out.println(0);
+        for(int i = 0; i < n; i++) {
+            ch = s.charAt(i);
+            if(ch == '(') {
+                deque.push(')');
+                count++;
+            } else if(deque.isEmpty() || deque.peek() != ch) {
+                break;
+            } else {
+                deque.pop();
+                count++;
+            }
+        }
+        System.out.println(count);
+    }
+}
+```
+
+修改后的代码:因为上面实现的代码是遇到了左括号都加一了，所以要是是这种情况的话"((()))(("就会错，多了最后两个左括号
+
+```java
+import java.util.Scanner;
+import java.util.Deque;
+import java.util.LinkedList;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        int n = sc.nextInt();
+        sc.nextLine(); // 读取换行符
+        String s = sc.nextLine();
+
+        Deque<Character> deque = new LinkedList<>();
+        int maxLength = 0;
+        if (n == 0) {
+            System.out.println(0);
+        } else {
+            for (int i = 0; i < n; i++) {
+                char ch = s.charAt(i);
+                if (ch == '(') {
+                    deque.push(ch);
+                } else if (deque.isEmpty() || deque.pop() != '(') {
+                    // 当栈为空或者当前字符不能与栈顶元素匹配时，跳出循环
+                    break;
+                } else {
+                    // 更新最大合法前缀长度
+                    maxLength = Math.max(maxLength, i + 1);
+                }
+            }
+        }
+        System.out.println(maxLength);
+    }
+}
+
+```
+
+# 题三:n和m两个数，对n进行数字重排，输出有多少个数能被m整除(没时间做了)
+
+## 题目描述
+
+给定两个正整数n和m，请你对n进行数字重排，使得重排后的数字能被m整除，并输出满足条件的重排数字的个数
+
+### 代码实现
+
+第一思路是用回溯然后把所有组成都列出来，然后再进行判断，可以对数字进行转换成字符串再进行全排列(明天补充一下)
+
+```java
+import java.util.*;
+
+public class Main {
+    public static int countUniqueDivisiblePermutations(int n, int m) {
+        char[] digits = String.valueOf(n).toCharArray();
+        Set<String> uniquePermutations = new HashSet<>();
+        boolean[] used = new boolean[digits.length];
+        Arrays.fill(used, false);
+        permute(digits, used, new StringBuilder(), m, uniquePermutations);
+        return uniquePermutations.size();
+    }
+
+    private static void permute(char[] digits, boolean[] used, StringBuilder current, int m, Set<String> uniquePermutations) {
+        if (current.length() == digits.length) {
+            if (current.charAt(0) != '0' && Integer.parseInt(current.toString()) % m == 0) {
+                uniquePermutations.add(current.toString());
+            }
+            return;
+        }
+
+        for (int i = 0; i < digits.length; i++) {
+            if (!used[i]) {
+                used[i] = true;
+                current.append(digits[i]);
+                permute(digits, used, current, m, uniquePermutations);
+                used[i] = false;
+                //可以使用deleteCharAt,两者都是一个目的
+                current.setLength(current.length() - 1);
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        int n = sc.nextInt();
+        int m = sc.nextInt();
+        int count = countUniqueDivisiblePermutations(n, m);
+        System.out.println(count);
+    }
+}
+
+```
+
+# 总结
+
+没想到时间这么少但是题量这么多，但是难度整体来说不是很大
+
+last update:08-22-2024

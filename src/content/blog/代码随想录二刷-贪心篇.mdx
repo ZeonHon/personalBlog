@@ -1,0 +1,763 @@
+---
+title: "代码随想录二刷记录-贪心篇"
+description: "为了准备秋招笔试，二刷代码随想录的题目，并将解答过程记录"
+pubDate: "08 27 2024"
+categories:
+  - tech
+tags:
+  - 算法
+---
+
+# 题一、分发饼干
+
+力扣链接:https://leetcode.cn/problems/assign-cookies/
+
+## 题目描述
+
+假设你是一位很棒的家长，想要给你的孩子们一些小饼干。但是，每个孩子最多只能给一块饼干。
+
+对每个孩子 i，都有一个胃口值  g[i]，这是能让孩子们满足胃口的饼干的最小尺寸；并且每块饼干 j，都有一个尺寸 s[j] 。如果 s[j] >= g[i]，我们可以将这个饼干 j 分配给孩子 i ，这个孩子会得到满足。你的目标是尽可能满足越多数量的孩子，并输出这个最大数值
+
+### 思路
+
+可以是优先考虑饼干，先给小胃口的喂；也可以是优先考虑胃口，先把大胃口的满足
+
+```java
+class Solution {
+    //优先考虑胃口，先喂饱大胃口
+    public int findContentChildren(int[] g, int[] s) {
+        Arrays.sort(g);
+        Arrays.sort(s);
+        int count = 0;
+        int start = s.length - 1;
+        // 遍历胃口
+        for (int index = g.length - 1; index >= 0; index--) {
+            if(start >= 0 && g[index] <= s[start]) {
+                start--;
+                count++;
+            }
+        }
+        return count;
+    }
+}
+```
+
+# 题二、摆动序列
+
+力扣链接:https://leetcode.cn/problems/wiggle-subsequence/
+
+## 题目描述
+
+如果连续数字之间的差严格地在正数和负数之间交替，则数字序列称为摆动序列。第一个差（如果存在的话）可能是正数或负数。仅有一个元素或者含两个不等元素的序列也视作摆动序列。
+
+例如， [1, 7, 4, 9, 2, 5] 是一个摆动序列 ，因为差值 (6, -3,5, -7, 3) 是正负交替出现的。
+
+### 思路
+
+当前差值和前一差值为一正一负即可count++(但是需要考虑几种特殊情况)
+
+- 情况一：上下坡中有平坡
+
+- 情况二：数组首尾两端
+
+- 情况三：单调坡中有平坡
+
+```java
+class Solution {
+    public int wiggleMaxLength(int[] nums) {
+        if (nums.length <= 1) {
+            return nums.length;
+        }
+        //当前差值
+        int curDiff = 0;
+        //上一个差值
+        int preDiff = 0;
+        int count = 1;
+        for (int i = 1; i < nums.length; i++) {
+            //得到当前差值
+            curDiff = nums[i] - nums[i - 1];
+            //如果当前差值和上一个差值为一正一负
+            //等于0的情况表示初始时的preDiff
+            if ((curDiff > 0 && preDiff <= 0) || (curDiff < 0 && preDiff >= 0)) {
+                count++;
+                preDiff = curDiff;
+            }
+        }
+        return count;
+    }
+}
+```
+
+# 题三、最大子序和
+
+力扣链接:https://leetcode.cn/problems/maximum-subarray/
+
+## 题目描述
+
+给定一个整数数组 nums ，找到一个具有最大和的连续子数组（子数组最少包含一个元素），返回其最大和
+
+### 思路
+
+**贪心的思路为局部最优：当前“连续和”为负数的时候立刻放弃，从下一个元素重新计算“连续和”，因为负数加上下一个元素 “连续和”只会越来越小。从而推出全局最优：选取最大“连续和”**
+
+```java
+class Solution {
+    public int maxSubArray(int[] nums) {
+        if (nums.length == 1){
+            return nums[0];
+        }
+        int sum = Integer.MIN_VALUE;
+        int count = 0;
+        for (int i = 0; i < nums.length; i++){
+            count += nums[i];
+            sum = Math.max(sum, count); // 取区间累计的最大值（相当于不断确定最大子序终止位置）
+            if (count <= 0){
+                count = 0; // 相当于重置最大子序起始位置，因为遇到负数一定是拉低总和
+            }
+        }
+       return sum;
+    }
+}
+```
+
+# 题四、买卖股票的最佳时机 II
+
+力扣链接:https://leetcode.cn/problems/best-time-to-buy-and-sell-stock-ii/
+
+## 题目描述
+
+给定一个数组，它的第  i 个元素是一支给定股票第 i 天的价格。
+
+设计一个算法来计算你所能获取的最大利润。你可以**尽可能地完成更多的交易**（多次买卖一支股票）。
+
+注意：你不能同时参与多笔交易（你必须在再次购买前出售掉之前的股票）。
+
+示例 1:
+
+输入: [7,1,5,3,6,4]
+
+输出: 7
+
+解释: 在第 2 天（股票价格 = 1）的时候买入，在第 3 天（股票价格 = 5）的时候卖出, 这笔交易所能获得利润 = 5-1 = 4。随后，在第 4 天（股票价格 = 3）的时候买入，在第 5 天（股票价格 = 6）的时候卖出, 这笔交易所能获得利润 = 6-3 = 3
+
+### 思路
+
+局部最优：收集每天的正利润，全局最优：求得最大利润
+
+把利润分解为每天为单位的维度:
+
+<img src="https://code-thinking-1253855093.file.myqcloud.com/pics/2020112917480858-20230310134659477.png"/>
+
+```java
+// 贪心思路
+class Solution {
+    public int maxProfit(int[] prices) {
+        int result = 0;
+        for (int i = 1; i < prices.length; i++) {
+            result += Math.max(prices[i] - prices[i - 1], 0);
+        }
+        return result;
+    }
+}
+```
+
+# 题五、跳跃游戏
+
+力扣链接:https://leetcode.cn/problems/jump-game/
+
+## 题目描述
+
+给定一个非负整数数组，你最初位于数组的第一个位置。
+
+数组中的每个元素代表你在该位置可以跳跃的最大长度。
+
+判断你是否能够到达最后一个位置
+
+### 思路
+
+贪心算法局部最优解：每次取最大跳跃步数（取最大覆盖范围），整体最优解：最后得到整体最大覆盖范围，看是否能到终点
+
+```java
+class Solution {
+    public boolean canJump(int[] nums) {
+        if (nums.length == 1) {
+            return true;
+        }
+        //覆盖范围, 初始覆盖范围应该是0，因为下面的迭代是从下标0开始的
+        int coverRange = 0;
+        //在覆盖范围内更新最大的覆盖范围
+        for (int i = 0; i <= coverRange; i++) {
+            coverRange = Math.max(coverRange, i + nums[i]);
+            if (coverRange >= nums.length - 1) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+```
+
+# 题六、跳跃游戏II
+
+力扣链接:https://leetcode.cn/problems/jump-game-ii/
+
+## 题目描述
+
+给定一个非负整数数组，你最初位于数组的第一个位置。
+
+数组中的每个元素代表你在该位置可以跳跃的最大长度。
+
+你的目标是**使用最少的跳跃次数**到达数组的最后一个位置
+
+说明: 假设你总是可以到达数组的最后一个位置
+
+### 思路
+
+真正解题的时候，要从覆盖范围出发，不管怎么跳，覆盖范围内一定是可以跳到的，以最小的步数增加覆盖范围，覆盖范围一旦覆盖了终点，得到的就是最少步数！
+
+这里需要统计两个覆盖范围，当前这一步的最大覆盖和下一步最大覆盖
+
+如果移动下标达到了当前这一步的最大覆盖最远距离了，还没有到终点的话，那么就必须再走一步来增加覆盖范围，直到覆盖范围覆盖了终点
+
+```java
+class Solution {
+    public int jump(int[] nums) {
+        if (nums == null || nums.length == 0 || nums.length == 1) {
+            return 0;
+        }
+        //记录跳跃的次数
+        int count=0;
+        //当前的覆盖最大区域
+        int curDistance = 0;
+        //最大的覆盖区域
+        int maxDistance = 0;
+        for (int i = 0; i < nums.length; i++) {
+            //在可覆盖区域内更新最大的覆盖区域
+            maxDistance = Math.max(maxDistance,i+nums[i]);
+            //说明当前一步，再跳一步就到达了末尾
+            if (maxDistance>=nums.length-1){
+                count++;
+                break;
+            }
+            //走到当前覆盖的最大区域时，更新下一步可达的最大区域
+            if (i==curDistance){
+                curDistance = maxDistance;
+                count++;
+            }
+        }
+        return count;
+    }
+}
+
+```
+
+# 题七、K次取反后最大化的数组和
+
+力扣链接:https://leetcode.cn/problems/maximize-sum-of-array-after-k-negations/
+
+## 题目描述
+
+给定一个整数数组 A，我们只能用以下方法修改该数组：我们选择某个索引 i 并将 A[i] 替换为 -A[i]，然后总共重复这个过程 K 次（我们可以多次选择同一个索引 i）
+
+以这种方式修改数组后，返回数组可能的最大和
+
+贪心的思路，局部最优：让绝对值大的负数变为正数，当前数值达到最大，整体最优：整个数组和达到最大。
+
+局部最优可以推出全局最优。
+
+那么如果将负数都转变为正数了，K依然大于0，此时的问题是一个有序正整数序列，如何转变K次正负，让 数组和 达到最大。
+
+那么又是一个贪心：局部最优：只找数值最小的正整数进行反转，当前数值和可以达到最大（例如正整数数组{5, 3, 1}，反转1 得到-1 比 反转5得到的-5 大多了），全局最优：整个数组和达到最大
+
+本题的解题步骤为：
+
+1. 将数组按照绝对值大小从大到小排序，注意要按照绝对值的大小
+
+2. 从前向后遍历，遇到负数将其变为正数，同时K--
+
+3. 如果K还大于0，那么反复转变数值最小的元素，将K用完
+
+4. 求和
+
+```java
+class Solution {
+    public int largestSumAfterKNegations(int[] nums, int K) {
+    	// 将数组按照绝对值大小从大到小排序，注意要按照绝对值的大小
+	nums = IntStream.of(nums)
+		     .boxed()
+		     .sorted((o1, o2) -> Math.abs(o2) - Math.abs(o1))
+		     .mapToInt(Integer::intValue).toArray();
+	int len = nums.length;	    
+	for (int i = 0; i < len; i++) {
+	    //从前向后遍历，遇到负数将其变为正数，同时K--
+	    if (nums[i] < 0 && K > 0) {
+	    	nums[i] = -nums[i];
+	    	K--;
+	    }
+	}
+	// 如果K还大于0，那么反复转变数值最小的元素，将K用完
+
+	if (K % 2 == 1) nums[len - 1] = -nums[len - 1];
+	return Arrays.stream(nums).sum();
+
+    }
+}
+```
+
+# 题八、加油站
+
+力扣链接:https://leetcode.cn/problems/gas-station/
+
+## 题目描述
+
+在一条环路上有 N 个加油站，其中第 i 个加油站有汽油 gas[i] 升。
+
+你有一辆油箱容量无限的的汽车，从第 i 个加油站开往第 i+1 个加油站需要消耗汽油 cost[i] 升。你从其中的一个加油站出发，开始时油箱为空。
+
+如果你可以绕环路行驶一周，则返回出发时加油站的编号，否则返回 -1
+
+### 思路
+
+首先如果总油量减去总消耗大于等于零那么一定可以跑完一圈，说明 各个站点的加油站 剩油量rest[i]相加一定是大于等于零的。
+
+每个加油站的剩余量rest[i]为gas[i] - cost[i]。
+
+i从0开始累加rest[i]，和记为curSum，一旦curSum小于零，说明[0, i]区间都不能作为起始位置，因为这个区间选择任何一个位置作为起点，到i这里都会断油，那么起始位置从i+1算起，再从0计算curSum
+
+<img src="https://code-thinking-1253855093.file.myqcloud.com/pics/20230117165628.png"/>
+
+```java
+class Solution {
+    public int canCompleteCircuit(int[] gas, int[] cost) {
+        int tank = 0; // 当前油量
+        int totalGas = 0;  // 总加油量
+        int totalCost = 0; // 总油耗
+        int start = 0; // 起点
+        for (int i = 0; i < gas.length; i++) {
+            totalGas += gas[i];
+            totalCost += cost[i];
+            
+            tank += gas[i] - cost[i];
+            if (tank < 0) { // tank 变为负数 意味着 从0到i之间出发都不能顺利环路一周，因为在此i点必会没油
+                tank = 0; 
+                start = i + 1; // 起点变为i点往后一位
+            }
+        }
+        if (totalCost > totalGas) return -1;
+        return start;
+    }
+}
+```
+
+# 题九、分发糖果
+
+力扣链接:https://leetcode.cn/problems/candy/
+
+## 题目描述
+
+老师想给孩子们分发糖果，有 N 个孩子站成了一条直线，老师会根据每个孩子的表现，预先给他们评分。
+
+你需要按照以下要求，帮助老师给这些孩子分发糖果：
+
+每个孩子至少分配到 1 个糖果
+
+相邻的孩子中，评分高的孩子必须获得更多的糖果
+
+那么这样下来，老师至少需要准备多少颗糖果呢？
+
+### 思路
+
+采用了两次贪心的策略：
+
+一次是从左到右遍历，只比较右边孩子评分比左边大的情况
+
+一次是从右到左遍历，只比较左边孩子评分比右边大的情况
+
+这样从局部最优推出了全局最优，即：相邻的孩子中，评分高的孩子获得更多的糖果
+
+```java
+class Solution {
+    /**
+         分两个阶段
+         1、起点下标1 从左往右，只要 右边 比 左边 大，右边的糖果=左边 + 1
+         2、起点下标 ratings.length - 2 从右往左， 只要左边 比 右边 大，此时 左边的糖果应该 取本身的糖果数（符合比它左边大） 和 右边糖果数 + 1 二者的最大值，这样才符合 它比它左边的大，也比它右边大
+    */
+    public int candy(int[] ratings) {
+        int len = ratings.length;
+        int[] candyVec = new int[len];
+        candyVec[0] = 1;
+        for (int i = 1; i < len; i++) {
+            candyVec[i] = (ratings[i] > ratings[i - 1]) ? candyVec[i - 1] + 1 : 1;
+        }
+
+        for (int i = len - 2; i >= 0; i--) {
+            if (ratings[i] > ratings[i + 1]) {
+                candyVec[i] = Math.max(candyVec[i], candyVec[i + 1] + 1);
+            }
+        }
+
+        int ans = 0;
+        //可以用stream来求和，但是耗时可能会多一点
+        //int ans = IntStream.of(candyVec).sum();
+
+        for (int num : candyVec) {
+            ans += num;
+        }
+        return ans;
+    }
+}
+```
+
+# 题十、柠檬水找零
+
+力扣链接:https://leetcode.cn/problems/lemonade-change/
+
+## 题目描述
+
+在柠檬水摊上，每一杯柠檬水的售价为 5 美元。
+
+顾客排队购买你的产品，（按账单 bills 支付的顺序）一次购买一杯。
+
+每位顾客只买一杯柠檬水，然后向你付 5 美元、10 美元或 20 美元。你必须给每个顾客正确找零，也就是说净交易是每位顾客向你支付 5 美元。
+
+注意，一开始你手头没有任何零钱。
+
+如果你能给每位顾客正确找零，返回 true ，否则返回 false
+
+### 思路
+
+如果第一个不是给的5刀就可以直接false了，然后就要思考找零的情况
+
+- 给5直接收下
+
+- 给10，找零一个5，10的个数+1，5的个数-1
+
+- 给20，优先找零一个10和一个5，10的个数-1，5的个数-1；或者找零三个5
+
+因为10的作用只能是给20的找零，但是5的作用就更多，所以优先把10的消耗掉
+
+所以局部最优：遇到账单20，优先消耗美元10，完成本次找零。全局最优：完成全部账单的找零
+
+```java
+class Solution {
+    public boolean lemonadeChange(int[] bills) {
+        int five = 0;
+        int ten = 0;
+
+        for (int i = 0; i < bills.length; i++) {
+            if (bills[i] == 5) {
+                five++;
+            } else if (bills[i] == 10) {
+                five--;
+                ten++;
+            } else if (bills[i] == 20) {
+                if (ten > 0) {
+                    ten--;
+                    five--;
+                } else {
+                    five -= 3;
+                }
+            }
+            if (five < 0 || ten < 0) return false;
+        }
+        
+        return true;
+    }
+}
+```
+
+# 题十一、根据身高重建队列
+
+力扣链接:https://leetcode.cn/problems/queue-reconstruction-by-height/
+
+## 题目描述
+
+假设有打乱顺序的一群人站成一个队列，数组 people 表示队列中一些人的属性（不一定按顺序）。每个 people[i] = [hi, ki] 表示第 i 个人的身高为 hi ，前面 正好 有 ki 个身高大于或等于 hi 的人。
+
+请你重新构造并返回输入数组 people 所表示的队列。返回的队列应该格式化为数组 queue ，其中 queue[j] = [hj, kj] 是队列中第 j 个人的属性（queue[0] 是排在队列前面的人）
+
+### 思路
+
+按照身高进行从大到小的一个排序
+
+按照身高排序之后，优先按身高高的people的k来插入，后序插入节点也不会影响前面已经插入的节点，最终按照k的规则完成了队列。
+
+所以在按照身高从大到小排序后：
+
+局部最优：优先按身高高的people的k来插入。插入操作过后的people满足队列属性
+
+全局最优：最后都做完插入操作，整个队列满足题目队列属性
+
+```java
+class Solution {
+    public int[][] reconstructQueue(int[][] people) {
+        // 身高从大到小排（身高相同k小的站前面）
+        Arrays.sort(people, (a, b) -> {
+            if (a[0] == b[0]) return a[1] - b[1];   // a - b 是升序排列，故在a[0] == b[0]的狀況下，會根据k值升序排列
+            return b[0] - a[0];   //b - a 是降序排列，在a[0] != b[0]，的状况会根据h值降序排列
+        });
+
+        LinkedList<int[]> que = new LinkedList<>();
+
+        for (int[] p : people) {
+            que.add(p[1],p);   //Linkedlist.add(index, value)，会将value插入到指定index裡。
+        }
+
+        return que.toArray(new int[people.length][]);
+    }
+}
+```
+
+# 题十二、用最少数量的箭引爆气球
+
+力扣链接:https://leetcode.cn/problems/minimum-number-of-arrows-to-burst-balloons/
+
+## 题目描述
+
+在二维空间中有许多球形的气球。对于每个气球，提供的输入是水平方向上，气球直径的开始和结束坐标。由于它是水平的，所以纵坐标并不重要，因此只要知道开始和结束的横坐标就足够了。开始坐标总是小于结束坐标。
+
+一支弓箭可以沿着 x 轴从不同点完全垂直地射出。在坐标 x 处射出一支箭，若有一个气球的直径的开始和结束坐标为 xstart，xend， 且满足  xstart ≤ x ≤ xend，则该气球会被引爆。可以射出的弓箭的数量没有限制。 弓箭一旦被射出之后，可以无限地前进。我们想找到使得所有气球全部被引爆，所需的弓箭的最小数量。
+
+给你一个数组 points ，其中 points [i] = [xstart,xend] ，返回引爆所有气球所必须射出的最小弓箭数
+
+### 思路
+
+先对原数组按照左边界或者右边界进行排序(个人习惯对左边界进行排序)，然后找到有重叠的区间，即它们可以被一枝箭射爆
+
+局部最优：当气球出现重叠，一起射，所用弓箭最少。全局最优：把所有气球射爆所用弓箭最少
+
+```java
+class Solution {
+    public int findMinArrowShots(int[][] points) {
+        // 根据气球直径的开始坐标从小到大排序
+        // 使用Integer内置比较方法，不会溢出
+        Arrays.sort(points, (a, b) -> Integer.compare(a[0], b[0]));
+
+        int count = 1;  // points 不为空至少需要一支箭
+        for (int i = 1; i < points.length; i++) {
+            if (points[i][0] > points[i - 1][1]) {  // 气球i和气球i-1不挨着，注意这里不是>=
+                count++; // 需要一支箭
+            } else {  // 气球i和气球i-1挨着
+                points[i][1] = Math.min(points[i][1], points[i - 1][1]); // 更新重叠气球最小右边界
+            }
+        }
+        return count;
+    }
+}
+```
+
+# 题十三、无重叠区间
+
+力扣链接:https://leetcode.cn/problems/non-overlapping-intervals/
+
+## 题目描述
+
+给定一个区间的集合，找到需要移除区间的最小数量，使剩余区间互不重叠。
+
+注意: 可以认为区间的终点总是大于它的起点。 区间 [1,2] 和 [2,3] 的边界相互“接触”，但没有相互重叠
+
+### 思路
+
+依然是按照左边界进行排序，然后判断有无重叠区间，有的话count++，并且更新重叠区间的最小右边界，最后返回count
+
+```java
+class Solution {
+    public int eraseOverlapIntervals(int[][] intervals) {
+        Arrays.sort(intervals, (a,b)-> {
+            return Integer.compare(a[0],b[0]);
+        });
+        int remove = 0;
+        int pre = intervals[0][1];
+        for(int i = 1; i < intervals.length; i++) {
+            if(pre > intervals[i][0]) {
+                remove++;
+                pre = Math.min(pre, intervals[i][1]);
+            }
+            else pre = intervals[i][1];
+        }
+        return remove;
+    }
+}
+```
+
+# 题十四、划分字母区间
+
+力扣链接:https://leetcode.cn/problems/partition-labels/
+
+## 题目描述
+
+字符串 S 由小写字母组成。我们要把这个字符串划分为尽可能多的片段，同一字母最多出现在一个片段中。返回一个表示每个字符串片段的长度的列表。
+
+示例：
+
+输入：S = "ababcbacadefegdehijhklij"
+
+输出：[9,7,8] 解释： 划分结果为 "ababcbaca", "defegde", "hijhklij"。 每个字母最多出现在一个片段中。 像 "ababcbacadefegde", "hijhklij" 的划分是错误的，因为划分的片段数较少
+
+### 思路
+
+在遍历的过程中相当于是要找每一个字母的边界，如果找到之前遍历过的所有字母的最远边界，说明这个边界就是分割点了。此时前面出现过所有字母，最远也就到这个边界了
+
+- 统计每一个字符最后出现的位置
+
+- 从头遍历字符，并更新字符的最远出现下标，如果找到字符最远出现位置下标和当前下标相等了，则找到了分割点
+
+```java
+class Solution {
+    public List<Integer> partitionLabels(String S) {
+        List<Integer> list = new LinkedList<>();
+        int[] edge = new int[26];
+        char[] chars = S.toCharArray();
+        for (int i = 0; i < chars.length; i++) {
+            edge[chars[i] - 'a'] = i;
+        }
+        int idx = 0;
+        int last = -1;
+        for (int i = 0; i < chars.length; i++) {
+            idx = Math.max(idx,edge[chars[i] - 'a']);
+            if (i == idx) {
+                list.add(i - last);
+                last = i;
+            }
+        }
+        return list;
+    }
+}
+```
+
+# 题十五、合并区间
+
+力扣链接:https://leetcode.cn/problems/merge-intervals/
+
+## 题目描述
+
+给出一个区间的集合，请合并所有重叠的区间
+
+### 思路
+
+依然是按照左边界进行排序，然后判断右边界有没有重叠，有的话就更新右边界，然后将其作为一个新的区间加入到result数组里
+
+```java
+class Solution {
+    public int[][] merge(int[][] intervals) {
+        List<int[]> res = new LinkedList<>();
+        //按照左边界排序
+        Arrays.sort(intervals, (x, y) -> Integer.compare(x[0], y[0]));
+        //initial start 是最小左边界
+        int start = intervals[0][0];
+        int rightmostRightBound = intervals[0][1];
+        for (int i = 1; i < intervals.length; i++) {
+            //如果左边界大于最大右边界
+            if (intervals[i][0] > rightmostRightBound) {
+                //加入区间 并且更新start
+                res.add(new int[]{start, rightmostRightBound});
+                start = intervals[i][0];
+                rightmostRightBound = intervals[i][1];
+            } else {
+                //更新最大右边界
+                rightmostRightBound = Math.max(rightmostRightBound, intervals[i][1]);
+            }
+        }
+        res.add(new int[]{start, rightmostRightBound});
+        return res.toArray(new int[res.size()][]);
+    }
+}
+```
+
+# 题十六、单调递增的数字
+
+力扣链接:https://leetcode.cn/problems/monotone-increasing-digits/
+
+## 题目描述
+
+给定一个非负整数 N，找出小于或等于 N 的最大的整数，同时这个整数需要满足其各个位数上的数字是单调递增。
+
+（当且仅当每个相邻位数上的数字 x 和 y 满足 x 小于等于 y 时，我们称这个整数是单调递增的）
+
+### 思路
+
+```java
+class Solution {
+    public int monotoneIncreasingDigits(int n) {
+        String s = String.valueOf(n);
+        char[] chars = s.toCharArray();
+        int start = s.length();
+        for (int i = s.length() - 2; i >= 0; i--) {
+            if (chars[i] > chars[i + 1]) {
+                chars[i]--;
+                start = i+1;
+            }
+        }
+        for (int i = start; i < s.length(); i++) {
+            chars[i] = '9';
+        }
+        return Integer.parseInt(String.valueOf(chars));
+    }
+}
+```
+
+# 题十七、监控二叉树
+
+力扣链接:https://leetcode.cn/problems/binary-tree-cameras/
+
+## 题目描述
+
+给定一个二叉树，我们在树的节点上安装摄像头。
+
+节点上的每个摄影头都可以监视其父对象、自身及其直接子对象。
+
+计算监控树的所有节点所需的最小摄像头数量
+
+### 思路
+
+局部最优：让叶子节点的父节点安摄像头，所用摄像头最少，整体最优：全部摄像头数量所用最少
+
+```java
+class Solution {
+    int  res=0;
+    public int minCameraCover(TreeNode root) {
+        // 对根节点的状态做检验,防止根节点是无覆盖状态 .
+        if(minCame(root)==0){
+            res++;
+        }
+        return res;
+    }
+    /**
+     节点的状态值：
+       0 表示无覆盖
+       1 表示 有摄像头
+       2 表示有覆盖
+    后序遍历，根据左右节点的情况,来判读 自己的状态
+     */
+    public int minCame(TreeNode root){
+        if(root==null){
+            // 空节点默认为 有覆盖状态，避免在叶子节点上放摄像头
+            return 2;
+        }
+        int left=minCame(root.left);
+        int  right=minCame(root.right);
+
+        // 如果左右节点都覆盖了的话, 那么本节点的状态就应该是无覆盖,没有摄像头
+        if(left==2&&right==2){
+            //(2,2)
+            return 0;
+        }else if(left==0||right==0){
+            // 左右节点都是无覆盖状态,那 根节点此时应该放一个摄像头
+            // (0,0) (0,1) (0,2) (1,0) (2,0)
+            // 状态值为 1 摄像头数 ++;
+            res++;
+            return 1;
+        }else{
+            // 左右节点的 状态为 (1,1) (1,2) (2,1) 也就是左右节点至少存在 1个摄像头，
+            // 那么本节点就是处于被覆盖状态
+            return 2;
+        }
+    }
+}
+```
+
+# 总结
+
+贪心篇大概就刷到这里，接下来是动规篇，以及继续复习八股，和继续手写JVM系列文章的编写
+
+last update:08-29-2024

@@ -1,26 +1,35 @@
-import BaseLayout from "../layouts/BaseLayout.astro";
-import BaseCard from "../components/BaseCard.astro";
-import Collapse from "../components/blog/collapse.astro";
-import Diff from "../components/blog/diff.astro";
-import Error from "../components/blog/error.astro";
-import Info from "../components/blog/info.astro";
-import Kbd from "../components/blog/kbd.astro";
-import Success from "../components/blog/success.astro";
-import Warning from "../components/blog/warning.astro";
-import TimeLine from "../components/page/TimeLine.astro";
-import LinkCard from "../components/page/LinkCard.astro";
-
-<BaseLayout title="About">
-  <BaseCard title="About">
-# 关于本博客当月的时间线
-
-其他时间线可在生活文章中的当月月报中找到
-
+---
+title: "2024.08月报"
+description: "网站2024年8月份月报"
+pubDate: "08 31 2024"
+categories:
+  - life
+tags:
+  - 月报
 ---
 
-## TimeLine
+import TimeLine from "../../components/page/TimeLine.astro";
 
-    <TimeLine
+
+# 2024.08总结
+
+八月份正式建立了个人的第一个网站，主要是为了督促以及记录自己在学习路上的点滴
+
+目前八月份都在准备秋招的过程中，每天就是刷算法＋八股，顺便准备项目
+
+整个八月大概做了十场笔试(偏大厂，感觉应该是海笔)，还没有一次面试，所以每天都在准备八股和算法，防止有面试邀约突然袭来
+
+备战过程中不能太浮躁，没有面试或者新的笔试邀约也不要急躁，做好每天该做的，做好打持久战的信心
+
+**Inner peace~**
+
+（问题:联想浏览器经常会出现页面崩溃的情况？但是其他浏览器不会）
+
+总的来说一切都在向好的方向发展，希望九月份再接再厉！！！
+
+# 2024.08时间线
+
+<TimeLine
 
 items={[
 { year: "2024-8-07", event: "博客布局基本搭建完毕 && 发布《代码随想录二刷-数组篇》" },
@@ -37,6 +46,3 @@ items={[
 { year: "2024-8-30", event: "发布《代码随想录二刷-动规篇》" },
 ]}
 />
-
-  </BaseCard>
-</BaseLayout>

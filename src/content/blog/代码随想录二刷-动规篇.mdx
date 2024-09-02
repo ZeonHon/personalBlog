@@ -1,0 +1,158 @@
+---
+title: "代码随想录二刷记录-动规篇"
+description: "为了准备秋招笔试，二刷代码随想录的题目，并将解答过程记录"
+pubDate: "08 30 2024"
+categories:
+  - tech
+tags:
+  - 算法
+---
+
+由于动规的题目比较多，所以不会每道题都在这里写题解，简单一点的题不会记录；
+
+# 题一、整数拆分
+
+力扣链接:https://leetcode.cn/problems/integer-break/
+
+## 题目描述
+
+给定一个正整数 n，将其拆分为至少两个正整数的和，并使这些整数的乘积最大化。 返回你可以获得的最大乘积。
+
+
+示例 1:
+
+输入: 10
+
+输出: 36
+
+解释: 10 = 3 + 3 + 4, 3 × 3 × 4 = 36
+
+说明: 你可以假设 n 不小于 2 且不大于 58
+
+### 代码实现
+
+```java
+class Solution {
+    public int integerBreak(int n) {
+        //dp[i] 为正整数 i 拆分后的结果的最大乘积
+        int[] dp = new int[n+1];
+        dp[2] = 1;
+        for(int i = 3; i <= n; i++) {
+            for(int j = 1; j <= i-j; j++) {
+                // 这里的 j 其实最大值为 i-j,再大只不过是重复而已，
+                //并且，在本题中，dp[0], dp[1]都是无意义的，
+                //j 最大到 i-j,就不会用到 dp[0]与dp[1]
+                dp[i] = Math.max(dp[i], Math.max(j*(i-j), j*dp[i-j]));
+                // j * (i - j) 是单纯的把整数 i 拆分为两个数 也就是 i,i-j ，再相乘
+                //而j * dp[i - j]是将 i 拆分成两个以及两个以上的个数,再相乘。
+            }
+        }
+        return dp[n];
+    }
+}
+```
+
+# 题二、分割等和子集
+
+力扣链接:https://leetcode.cn/problems/partition-equal-subset-sum/
+
+## 题目描述
+
+给定一个只包含正整数的非空数组。是否可以将这个数组分割成两个子集，使得两个子集的元素和相等。
+
+注意: 每个数组中的元素不会超过 100 数组的大小不会超过 200
+
+### 代码实现
+
+```java
+class Solution {
+    public boolean canPartition(int[] nums) {
+        //using 2-D DP array.
+        int len = nums.length;
+        //check edge cases;
+        if(len == 0)
+            return false;
+
+        int sum = 0;
+        for (int num : nums)
+            sum += num;
+        //we only deal with even numbers. If sum is odd, return false;
+        if(sum % 2 == 1)
+            return false;
+        
+        int target = sum / 2;
+        int[][] dp = new int[nums.length][target + 1];
+        //initialize dp array
+        for(int j = nums[0]; j <= target; j++){
+            dp[0][j] = nums[0];
+        }
+
+        for(int i = 1; i < len; i++){
+            for(int j = 0; j <= target; j++){
+                if (j < nums[i]) 
+                    dp[i][j] = dp[i - 1][j];
+                else 
+                    dp[i][j] = Math.max(dp[i - 1][j], dp[i - 1][j - nums[i]] + nums[i]);
+            }
+        }
+        return dp[len - 1][target] == target;
+    }
+}
+```
+
+# 题三、最后一块石头的重量II
+
+力扣链接:https://leetcode.cn/problems/last-stone-weight-ii/
+
+## 题目描述
+
+有一堆石头，每块石头的重量都是正整数。
+
+每一回合，从中选出任意两块石头，然后将它们一起粉碎。假设石头的重量分别为 x 和 y，且 x 小于等于 y。那么粉碎的可能结果如下：
+
+如果 x 等于 y，那么两块石头都会被完全粉碎；
+
+如果 x 不等于 y，那么重量为 x 的石头将会完全粉碎，而重量为 y 的石头新重量为 y-x。
+
+最后，最多只会剩下一块石头。返回此石头最小的可能重量。如果没有石头剩下，就返回 0
+
+### 思路
+
+想办法将石头分为等重的两堆，转换为01背包问题
+
+这里的weight[i]和value[i]都是stone[i]
+
+```java
+class Solution {
+    public int lastStoneWeightII(int[] stones) {
+        int sum = 0;
+        for (int s : stones) {
+            sum += s;
+        }
+
+        int target = sum / 2;
+        //初始化，dp[i][j]为可以放0-i物品，背包容量为j的情况下背包中的最大价值
+        int[][] dp = new int[stones.length][target + 1];
+        //dp[i][0]默认初始化为0
+        //dp[0][j]取决于stones[0]
+        for (int j = stones[0]; j <= target; j++) {
+            dp[0][j] = stones[0];
+        }
+
+        for (int i = 1; i < stones.length; i++) {
+            for (int j = 1; j <= target; j++) {//注意是等于
+                if (j >= stones[i]) {
+                    //不放:dp[i - 1][j] 放:dp[i - 1][j - stones[i]] + stones[i]
+                    dp[i][j] = Math.max(dp[i - 1][j], dp[i - 1][j - stones[i]] + stones[i]);
+                } else {
+                    dp[i][j] = dp[i - 1][j];
+                }
+            }
+        }
+
+        System.out.println(dp[stones.length - 1][target]);
+        return (sum - dp[stones.length - 1][target]) - dp[stones.length - 1][target];
+    }
+}
+```
+

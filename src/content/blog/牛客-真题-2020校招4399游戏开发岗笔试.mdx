@@ -1,0 +1,229 @@
+---
+title: "牛客-真题-2020校招4399开发岗笔试"
+description: "为了准备秋招笔试，在牛客的真题练习里面挑选了一些厂的笔试真题来做一下，这一篇是4399的笔试(说句实话，牛客里面很多真题已经很久没更新了)"
+pubDate: "08 09 2024"
+categories:
+  - tech
+tags:
+  - 算法
+  - 秋招
+---
+
+# 题目1 : 小球自由落体
+
+## 题目描述
+
+一球从100米高度自由落下，每次落地后反跳回原高度的一半；再落下，求它在**第n次落地**时，共经过多少米？第n次反弹多高？
+
+### 思路
+
+这题不难，简单的数学题，注意题目所说的意思即可(第n次落地时，即最后一次落地不用再反弹)
+
+```java
+import java.util.Scanner;
+ 
+// 注意类名必须为 Main, 不要有任何 package xxx 信息
+public class Main {
+    private static void fallForFreedom(int n , int originalHeight) {
+         //定义ans1保存全程经过的距离
+        double ans1 = 0.0;
+        //ans2保存第n次反弹的高度
+        double ans2 = originalHeight;
+        for(int i = 1; i <=n; i++) {
+            //如果输入为1，则小球反弹的高度应该为originalHeight的一半，但是这个回弹高度是不用加在ans1里面的
+            if(i == 1) {
+                ans1 += originalHeight;
+                ans2 /= 2;
+            } else {
+                //注意这里是 2 * ans,因为是计算落地的总路程
+                //举个例子: n=2，则小球第一次落地时弹起来50m，然后还要往下掉50m到地上，才算是第二次落地
+                ans1 += 2 * ans2;
+                ans2 /= 2;
+            }
+        }
+        //输出小数点后6位
+        String formattedNumber1 = String.format("%.6f", ans1);
+        String formattedNumber2 = String.format("%.6f", ans2);
+        System.out.print(formattedNumber1 + " " + formattedNumber2);
+    }
+ 
+    public static void main(String[] args) {
+        Scanner in = new Scanner(System.in);
+        int n = in.nextInt();
+        fallForFreedom(n , 100);
+    }
+}
+```
+
+# 题目2 : 序号4
+
+## 题目描述
+
+有n个人围成一圈，顺序排号。从第一个人开始报数（从1到3报数），凡报到3的人退出圈子，问最后留下的是原来第几号的那位。
+
+### 思路
+
+这是个经典的约瑟夫环问题
+
+第一想法是:创建一个环形链表，然后不断删除报数为3的节点，直到只剩下一个节点，然后返回这个节点的序号即可
+
+```java
+import java.util.Scanner;
+ 
+// 注意类名必须为 Main, 不要有任何 package xxx 信息
+class ListNode {
+    int val;
+    ListNode next;
+    ListNode(int val) {
+        this.val = val;
+    }
+}
+public class Main {
+    public static void main(String[] args) {
+        Scanner in = new Scanner(System.in);
+        //输入n
+        int n = in.nextInt();
+        //初始化头节点，即第一个节点，用值来代表它的编号
+        ListNode head = new ListNode(1);
+        ListNode cur = head;
+        //建立一个环形链表
+        for(int i = 2; i <= n; i++) {
+            //用i代表节点的值以及编号
+            cur.next = new ListNode(i);
+            cur = cur.next;
+        }
+        //让cur.next指向head形成闭环
+        cur.next = head;
+        //用于计算谁被淘汰
+        int count = 1;
+        ListNode pre = null;
+        cur = head;
+        //如果只有一个人，那这个人就走了
+        if(n == 1) {
+            System.out.print(cur.val);
+        } else {
+            while(cur != pre) {
+            if(count % 3 != 0) {
+                pre = cur;
+                cur = cur.next;
+                count++;
+            }
+            if(count % 3 == 0) {
+                count = 1;
+                cur = cur.next;
+                pre.next = cur;
+            }
+        }
+            System.out.print(cur.val);
+        }
+    }
+}
+```
+
+**解法二** : 用队列解决(很不错的想法，在评论区看见的)
+
+(假设节点数量很多的情况下)每次都将第一个，第二个节点重新放到队列的末尾，然后弹出队首的元素
+
+此时弹出的元素就是报数为3的节点，一直重复，直到剩下一个节点为止，打印它的值即可
+
+```java
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        int n = scanner.nextInt();
+        Queue<Integer> queue = new LinkedList<>();
+        for (int i = 1; i <= n; i++) {
+            queue.add(i);
+        }
+        while (queue.size() != 1) {
+            for (int i = 0; i < 2; i++) {
+                queue.add(queue.poll());
+            }
+            queue.poll();
+        }
+        System.out.println(queue.peek());
+    }
+}
+
+```
+
+# 题目三 : 序号6
+
+## 题目描述
+
+段誉身具凌波微波，动无常则，若危若安
+
+一次能走一级台阶或者两级台阶，他要爬一段30级的山路，问有多少种走法？
+
+进阶问题：当他轻功熟练度提升，一次最多可以走三级，那就结果有什么变化？
+
+后来走火入魔了，**不能走一级**，只能走二或三级，又有什么变化？
+
+### 思路
+
+爬楼梯问题，简单的动态规划，注意状态转移方程的变化以及初始化值的情况即可
+
+```java
+import java.util.Scanner;
+
+// 注意类名必须为 Main, 不要有任何 package xxx 信息
+public class Main {
+    public static void main(String[] args) {
+       Scanner sc = new Scanner(System.in);
+        int n = sc.nextInt();
+        System.out.println(help1(n)+" "+help2(n)+" "+help3(n));
+    }
+     
+    private static int help1(int n){
+        if(n==1) return 1;
+        if(n==2) return 2;
+        int[] dp = new int[n+1];
+        dp[0] = 0;
+        dp[1] = 1;
+        dp[2] = 2;
+        for(int i = 3;i<=n;i++){
+            dp[i] = dp[i-1] + dp[i-2];
+        }
+        return dp[n];
+    }
+     
+    private static int help2(int n){
+        if(n==1) return 1;
+        if(n==2) return 2;
+        if(n==3) return 4;
+        int[] dp = new int[n+1];
+        dp[0] = 0;
+        dp[1] = 1;
+        dp[2] = 2;
+        dp[3] = 4;
+        for(int i = 4;i<=n;i++){
+            dp[i] = dp[i-1] + dp[i-2] + dp[i-3];
+        }
+        return dp[n];
+    }
+     
+    private static int help3(int n){
+        if(n==1) return 0;
+        if(n==2) return 1;
+        if(n==3) return 1;
+        int[] dp = new int[n+1];
+        dp[0] = 0;
+        dp[1] = 0;
+        dp[2] = 1;
+        dp[3] = 1;
+        for(int i = 4;i<=n;i++){
+            dp[i] = dp[i-2] +dp[i-3];
+        }
+        return dp[n];
+    }
+}
+```
+
+# 总结
+
+有一题的测试用例好像是有问题的，所以就没有做那道题，总的来说还得继续努力，对于真正大厂的笔试题来说还是有一段距离
+
+last update : 08-09-2024
+

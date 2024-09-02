@@ -1,0 +1,239 @@
+---
+title: "秋招-京东2024-0824Java笔试"
+description: "08-24京东Java开发岗三道大题的解答"
+pubDate: "08 25 2024"
+categories:
+  - tech
+tags:
+  - 算法
+  - 秋招
+---
+
+# 题一：一百倍
+
+**通过率100%**
+
+## 题目描述
+
+给你一个整数N，判断0-N之间有多少个数是100的正整数倍(n的取值范围在-10的100次方到10的100次方)
+
+### 思路
+
+第一想法是直接用n / 100得到答案，然后直接就这么写了（定义的是int类型的n），然后只有一部分的测试数据过了
+
+然后回头检查题目看了一下n的取值范围，把int换成了long还是不行最后换成BigInteger类型就过了
+
+```java
+import java.math.BigInteger;
+import java.util.Scanner;
+
+// 注意类名必须为 Main, 不要有任何 package xxx 信息
+public class Main {
+    public static void main(String[] args) {
+        Scanner in = new Scanner(System.in);
+        // 注意 hasNext 和 hasNextLine 的区别
+        BigInteger n = in.nextBigInteger();
+        BigInteger count = countMutiplesOfHundred(n);
+        System.out.println(count);
+    }
+
+    public static BigInteger countMutiplesOfHundred(BigInteger n) {
+        if(n.compareTo(BigInteger.ZERO) < 0) {
+            return BigInteger.ZERO;
+        }
+        return n.divide(new BigInteger("100"));
+    }
+}
+```
+
+# 题二：涂色
+
+**通过率100%**
+
+## 题目描述
+
+给定一个n x m 的网格板，网格板由n x m个1 x 1大小的单元格组成，最初所有的单元格都是白色的，现给出k个操作；
+
+c x y会将位置为(x,y)的单元格涂成黑色
+
+l x y会从位置为(x,y)的单元格向左出发寻找最先出现的白色单元格并输出其坐标
+
+r x y会从位置为(x,y)的单元格向右出发寻找最先出现的白色单元格并输出其坐标
+
+u x y会从位置为(x,y)的单元格向上出发寻找最先出现的白色单元格并输出其坐标
+
+d x y会从位置为(x,y)的单元格向下出发寻找最先出现的白色单元格并输出其坐标
+
+网格板最左上角的单元格坐标为(1,1)
+
+//要求：对每一行操作都要输出对应操作后的坐标，若没有这样的坐标则输出-1
+
+### 思路
+
+好像也不是很难，就是常规思路来做就行，遇到黑色的就跳过，没有这样的坐标就输出-1
+
+```java
+import java.util.Scanner;
+
+// 注意类名必须为 Main, 不要有任何 package xxx 信息
+public class Main {
+    public static void main(String[] args) {
+        Scanner in = new Scanner(System.in);
+        // 注意 hasNext 和 hasNextLine 的区别
+        int n = in.nextInt();
+        int m = in.nextInt();
+        int k = in.nextInt();
+
+        int[][] grid = new int[n][m];
+
+        for(int i = 0; i < k; i++) {
+            //输入k行操作，每行操作包括三个参数
+            String command = in.next();
+            int x = in.nextInt() - 1;
+            int y = in.nextInt() - 1;
+            switch(command) {
+                case "c" :
+                    grid[x][y] = 1; //涂色
+                    break;
+                case "l" :
+                    processLeftCommand(grid , x , y);
+                    break;
+                case "r" :
+                    processRightCommand(grid , x , y);
+                    break;
+                case "u" :
+                    processUpCommand(grid , x , y);
+                    break;
+                case "d" :
+                    processDownCommand(grid , x , y);
+                    break;
+            }
+        }
+        in.close();
+    }
+
+    private static void processLeftCommand(int[][] grid , int x , int y) {
+         y--;
+        while(y >= 0 && grid[x][y] == 1) {
+            y--;
+        }
+        if(y >= 0) {
+            System.out.println((x + 1) + " " + (y + 1));
+        } else {
+            System.out.println(-1);
+        }
+    }
+
+    private static void processRightCommand(int[][] grid , int x , int y) {
+        y++;
+        while(y < grid[0].length && grid[x][y] == 1) {
+            y++;
+        }
+        if(y < grid[0].length) {
+            System.out.println((x + 1) + " " + (y + 1));
+        } else {
+            System.out.println(-1);
+        }
+    }
+
+    private static void processUpCommand(int[][] grid , int x , int y) {
+        x--;
+        while(x >= 0 && grid[x][y] == 1) {
+            x--;
+        }
+        if(x >= 0) {
+            System.out.println((x + 1) + " " + (y + 1));
+        } else {
+            System.out.println(-1);
+        }
+    }
+
+    private static void processDownCommand(int[][] grid , int x , int y) {
+        x++;
+        while(x < grid.length && grid[x][y] == 1) {
+            x++;
+        }
+        if(x < grid.length) {
+            System.out.println((x + 1) + " " + (y + 1));
+        } else {
+            System.out.println(-1);
+        }
+    }
+}
+```
+
+# 题三：木棍
+
+**通过率70%**，到最后都是超时了，2001ms;
+
+目前还在搜罗本题的正确解法，尚未更新100%通过的代码，只有当时写的代码...
+
+## 题目描述
+
+输入n代表木棍数量，第二行输入n个数代表木棍的长度，从中选出一个最长的子区间使得区间内任意三根木棍都能构成三角形，只需要输出选出的端点即可
+
+### 思路
+
+使用滑动窗口来进行区间端点的判断
+
+```java
+import java.util.Arrays;
+import java.util.Scanner;
+
+// 注意类名必须为 Main, 不要有任何 package xxx 信息
+public class Main {
+    public static void main(String[] args) {
+        Scanner in = new Scanner(System.in);
+        // 注意 hasNext 和 hasNextLine 的区别
+        int n = in.nextInt();
+        int[] stickLength = new int[n];
+        for(int i = 0; i < n; i++) {
+            stickLength[i] = in.nextInt();
+        }
+        in.close();
+        int[] result = findLongestTriangleInterval(stickLength);
+        System.out.println(result[0]+1 + " " + result[1]);
+    }
+
+    public static boolean isValidTriangle(int a , int b , int c) {
+        return a + b > c && a + c > b && b + c > a;
+    }
+    
+    public static boolean canFormTriangle(int[] stickLength , int start , int end) {
+        //检查区间内是否任意三根都能组成三角形
+        for(int i = start; i <= end - 2; i++) {
+            for(int j = i + 1; j <= end - 1; j++) {
+                for(int k = j + 1; k <= end; k++) {
+                    if(!isValidTriangle(stickLength[i] , stickLength[j] , stickLength[k])) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+    public static int[] findLongestTriangleInterval(int[] stickLength) {
+        int maxStart = 0;
+        int maxEnd = 2;
+        int curStart = 0;
+        int curEnd = 2;
+        while(curEnd < stickLength.length) {
+            //检查当前窗口的三根木棍能否组成
+            if(canFormTriangle(stickLength , curStart , curEnd)) {
+                //尝试扩大
+                curEnd++;
+            } else {
+                //如果不能，移动起始位置
+                curStart++;
+                curEnd = curStart + 2;
+            }
+
+            if(curEnd - curStart > maxEnd - maxStart) {
+                maxStart = curStart;
+                maxEnd = curEnd;
+            }
+        }
+        return new int[]{maxStart , maxEnd};
+    }
+}
+```

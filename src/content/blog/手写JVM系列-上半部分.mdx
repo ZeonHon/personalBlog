@@ -1,0 +1,565 @@
+---
+title: "手写JVM系列-上半部分"
+description: "在阅读张秀宏老师的《自己动手写Java虚拟机》以及Zachaxy的Java版本之后，将书中的go语言版本转换为Java版本，并实现一个简单的JVM"
+pubDate: "08 14 2024"
+categories:
+  - tech
+tags:
+  - JVM
+---
+
+import Collapse from "../../components/blog/collapse.astro";
+
+# 前言
+
+为了更好理解JVM，我决定将张秀宏老师的《自己动手写Java虚拟机》中用go语言实现的版本理解之后，用Java语言实现一版
+
+# 第一章 参数解析
+
+首先要弄清楚一个Java程序是如何运行的？？？
+
+1. 使用javac命令将源代码编译为class文件（字节码文件）
+
+2. 使用java命令运行class文件
+
+3. JVM将class文件加载到内存中，并执行
+
+JVM是只认class文件的，如果想让JVM运行该Hello程序，就要通过java命令。本节将介绍java命令的常用方法，并实现java命令的解析。最终通过命令参数，读取对应的class数据
+
+## Java命令简介
+
+Java应用程序需要一个入口点，**通俗地来讲就是main()方法**，如果一个类包含public static void main(String[] args)方法，这个类就可以用来启动Java应用程序，我们把这个类叫作主类.这个类是需要我们用命令行手动向JVM提供的;
+
+Java命令有如下4种形式(在cmd命令行中使用的):
+
+```java
+java [-options] class [args]
+java [-options] -jar jarfile [args]
+javaw [-options] class [args]
+javaw [-options] -jar jarfile [args]
+```
+
+可以向 java 命令传递三组参数：选项(-options)、主类名（或者JAR文件名）和 main() 方法参数。
+
+选项由减号-开头。通常，第一个非选项参数给出主类的完全限定名（fully qualified class name）。但是如果用户提供了–jar选项，第一个非选项参数表示JAR文件名，java命令必须从这个JAR文件中寻找主类。javaw命令和java命令几乎一样，唯一的差别在于，javaw命令不显示命令行窗口，因此特别适合用于启动GUI（图形用户界面）应用程序
+
+下面列出一些常见的-options选项:
+
+| 选项 | 用途 |
+| ---- | ----- |
+| -version	| 输出版本信息 |
+| -?/-help	| 输出帮助信息 |
+| -cp/-classpath	| 指定用户类路径 |
+| -Dproperty=value	| 设置Java系统属性 |
+| -Xms<size/>	| 设置初始堆空间大小 |
+| -Xmx<size/>	| 设置最大堆空间大小 |
+| -Xss<size/>	| 设置线程栈空间大小 |
+
+本系列将实现以下几种命令:
+
+1. java -version (查看版本信息:目前来说是滥竽充数的，因为还没有正式开始写JVM)
+
+2. java -?/-help (查看帮助信息)
+
+3. java -cp/-classpath your/classpath className arg1 arg2 (指定用户类路径)
+
+## 命令实现
+```java
+package BasicUtils;
+
+/**
+ * Author:ZeonHon
+ * Time:08-14-2024
+ * Description:此类为命令行工具类，用于实现cmd命令行输入java等相关命令时进行解析
+ */
+public class Cmd {
+    private boolean isRightFormat = true; //是否为正确的输入格式
+    private boolean isRightOption = true; //是否为正确的选项
+    private boolean helpFlag;             //是否为help，查看帮助信息
+    private boolean versionFlag;          //是否为version，查看版本信息
+    private String cpOption;              //classPath的路径，即java -cp/-classpath 其后跟的路径
+    /* 此变量XjreOption为空，则表示使用java的默认路径，否则使用XjreOption的路径
+       这是一个非标准选项，java命令中是不存在的
+       使用这个选项目的是用来指定启动类路径来寻找和加载Java标准库中的类
+       即JAVA_HOME/jre的路径；
+       这里要注意的是，如果真的要指定XjreOption，那么其路径值必须要用双引号包含起来
+     */
+    private String xJreOption;
+    private String clazz;                 //要执行的类名,包含了main方法的class文件
+    private String[] args;                //执行clazz文件所需要的参数，也就是命令行中类名后跟着的参数(可能有多个)
+
+    public Cmd(String[] args) { parseCmd(args); }
+    public Cmd(String cmdLine) { parseCmd(cmdLine); }
+
+    public void parseCmd(String cmdLine) {
+        //解析命令行参数，以单或者多个空格分开，路径名中间不能有空格不然会解析失败
+        String[] args = cmdLine.trim().split("\\s+");
+        parseCmd(args);
+    }
+    public void parseCmd(String[] args) {
+        int classNameIndex = 1; //用于记录类名的位置
+        //参数列表必须>=2 ， 因为最简单的命令比如java -version也有两个参数
+        if(args.length < 2) {
+            isRightFormat = false;
+            return;
+        }
+        //判断命令是不是以java开头的，如果不是就可以返回了，全错！
+        if(!args[0].equals("java")) {
+            isRightFormat = false;
+        } else {
+            if(args[1].equals("-version")) {
+                versionFlag = true;
+            } else if(args[1].equals("-help") || args[1].equals("-?")) {
+                helpFlag = true;
+            } else if(args[1].equals("-classpath") || args[1].equals("-cp")) {
+                //如果走到了这一步，说明命令格式正确，那么命令必定是这种形式；java -cp/-classpath 路径名 类名 参数1 参数2 ...至少有四个参数
+                if(args.length < 4) {
+                    isRightFormat = false;
+                }
+                classNameIndex = 3;
+                this.cpOption = args[2]; //记录路径所在
+            } else if(args[1].equals("-Xjre")) {
+                //如果走到了这一步，说明命令格式正确，那么命令必定是这种形式；java -Xjre "C:\Program Files\Java\jdk1.8.0_20\jre" java.lang.Object至少有四项
+                if(args.length < 4) {
+                    isRightFormat = false;
+                }
+                classNameIndex = 3;
+                this.xJreOption = args[2]; //记录jre所在路径
+            } else if(args[1].equals("-")) {
+                isRightOption = false;
+            }
+            this.clazz = args[classNameIndex]; //获取类名
+            this.args = new String[args.length - classNameIndex - 1]; //获取参数列表
+            System.arraycopy(args, classNameIndex + 1, this.args, 0, args.length - classNameIndex - 1);
+        }
+    }
+    public void printUsage() {
+        System.out.println("Usage: java [-options] class [args...]");
+        System.out.println("Specially,we don't support the path that contains space!");
+    }
+    //封装一些基本方法
+    public boolean isRightFmt() {
+        return isRightFormat;
+    }
+
+    public boolean isRightOpt() {
+        return isRightOption;
+    }
+
+    public boolean isHelpFlag() {
+        return helpFlag;
+    }
+
+    public boolean isVersionFlag() {
+        return versionFlag;
+    }
+
+    public String getCpOption() {
+        return cpOption;
+    }
+
+    public String getXJreOption() {
+        return xJreOption;
+    }
+
+    public String getClazz() {
+        return clazz;
+    }
+
+    public String[] getArgs() {
+        return args;
+    }
+}
+```
+
+**创建一个测试类用于测试Cmd类**
+
+```java
+package Test;
+
+import BasicUtils.Cmd;
+
+import java.util.Scanner;
+
+/**
+ * Author: ZeonHon
+ * Date: 08-14-2024
+ * @Description: 用于测试Cmd类的功能
+ */
+public class testCmd01 {
+    public static void main(String[] args) {
+        //用户进来首先弹出相关帮助信息
+        System.out.println("Usage: java [-options] class [args...]");
+        System.out.println("Specially,we don't support the path that contains space!");
+
+        Scanner sc = new Scanner(System.in);
+        String cmdLine = sc.nextLine();
+        String[] cmds = cmdLine.split("\\s+");
+        Cmd cmd = new Cmd(cmds);
+        if(!cmd.isRightFmt()) {
+            System.out.println("Incorrect command!");
+            cmd.printUsage();
+        } else if(!cmd.isRightOpt()) {
+            System.out.println("Incorrect option!" + cmds[1]);
+            cmd.printUsage();
+        } else {
+            if(cmd.isVersionFlag()) {
+                System.out.println("java version \"1.8.0_20\"\n"
+                        + "Java(TM) SE Runtime Environment (build 1.8.0_20-b26)\n"
+                        + "Java HotSpot(TM) 64-Bit Server VM (build 25.20-b23, mixed mode)");
+            } else if(cmd.isHelpFlag()) {
+                cmd.printUsage();
+            } else {
+                System.out.println("cmd parsed successful!");
+                // 检查 cmd.getArgs() 是否为 null 并进行安全处理
+                if (cmd.getArgs() != null) {
+                    for (String arg : cmd.getArgs()) {  
+                        System.out.println(arg);
+                    }
+                } else {
+                    System.out.println("No arguments provided.");
+                }
+            }
+        }
+    }
+}
+
+```
+
+# 第二章 搜索class路径
+
+> 这一篇的目的是根据-cp/-classpath的路径以及后面跟的文件名，搜索class文件，然后打印出该class文件的字节码
+
+## 关于类路径classpath
+
+Java虚拟机规范并没有规定虚拟机应该从哪里寻找类，所以不同的虚拟机可能会有不同的实现，Oracle的JVM就是根据类路径来搜索类
+
+类路径可以分为以下三部分(是的，就是熟悉的双亲委派模型里面的类加载器)
+
+1. 启动类路径(Bootstrap Classpath)：默认对应jre\lib目录，Java标准库(大部分在rt.jar里)位于该路径
+
+2. 扩展类路径(Extension Classpath)：默认对应jre\lib\ext目录，使用Java扩展机制的类位于这个路径
+
+3. 应用类路径(Application Classpath)：自己实现的类，以及第三方类库则位于用户类路径
+
+> 这里特别说一下:用户类路径的默认值就是当前目录,这也是平时我们配置Java开发环境时,网上很多教程会说要添加一个classpath变量,并将其变量值设置为 . (表示当前路径),其实这个根本没有必要,因为虚拟机默认是在当前路径下寻找class文件的.所以在刚开始学习Java编程时,使用文本编辑器写代码,只需要配置一个JAVA_HOME即可,如果是用IDE,那么恐怕连JAVA_HOME都不需要,只要你安装了JDK,在IDE中配置其路径即可,至于classpath,都是由IDE的脚本自动写好的,不同的IDE有自己的路径,我们只需要在IDE中写好代码,点击运行即可.
+
+可以设置CLASSPATH环境变量来修改用户类路径，但是这样做不够灵活，所以不推荐使用。更好的办法是给java命令传递-classpath（或简写为-cp）选项。-classpath/-cp选项的优先级更高，可以覆盖CLASSPATH环境变量设置
+
+### java命令中的classpath选项
+
+-classpath/-cp选项既可以指定目录，也可以指定JAR文件或者ZIP文件
+
+### 添加指向JDK启动类路径
+
+Java虚拟机将使用JDK的启动类路径来寻找和加载Java标准库中的类，因此需要某种方式指定jre目录的位置。命令行选项是个不错的选择，所以增加一个非标准选-Xjre选项。但是这一选项并不是必须的，目前已经实现了读取JAVA_HOME来寻找启动类路径的功能，所以-Xjre选项是在没有配置JAVA_HOME环境变量的情况下，使用的。如果本地机器上有该环境变量，则无需指定-Xjre
+
+注意这个选项的效果类似于-classpath,只不过这个选项是我们为了实现JVM自己添加的选项,并不是java自带的,其功能是指向**JDK启动类路径**,而-cp是指定用户类路径
+
+## 项目结构
+
+可以把类路径想象成一个大的整体，它由启动类路径、扩展类路径和用户类路径三个小路径构成。三个小路径又分别由更小的路径构成
+
+所以跟设计模式里面的组合模式有点像对吧
+
+考虑一下在命令行使用时的可能的场景:
+
+1. 直接指定路径,后面跟类名:**java -cp aaa/bbb/ccc className arg1 arg2**
+
+2. 指定类所在的jar文件的路径,后面跟类名:**java -cp aaa/bbb/ccc.jar className arg1 arg2**
+
+3. 指定一个模糊路径,后面跟类名:java -cp aaa/bbb/* className arg1 arg2
+
+4. 指定若干个路径,后面跟类名(指定的类存在指定的某一条路径中,如果都存在那么以第一条为准):**java -cp aaa1/bbb/ccc;aaa2/bbb/ccc;aaa3/bbb/ccc; className arg1 arg2**
+
+所以我们定义一个抽象类Entry来表示类路径，然后再定义具体的实现类来代表上述四种情况下的解决方案
+
+具体实现类:
+
+- DirEntry
+
+- ZipJarEntry
+
+- WildcardEntry
+
+- CompositeEntry
+
+### 抽象类Entry
+
+```java
+package classPath;
+
+import java.io.File;
+import java.io.IOException;
+
+/**
+ *  Author:ZeonHon
+ *  Date:08-16-2024
+ *  Description:抽象类Entry
+ */
+public abstract class Entry {
+    //路径分隔符,在window下,使用 ; 分割开的  在Unix/Linux下使用: 分割开的
+    public static final String PATH_SEPARATOR = System.getProperty("os.name").contains("Windows") ? ";" : ":" ;
+
+    /**
+     * 寻找和加载class文件
+     * @param className class文件的相对路径，路径之间用斜线 / 分隔，文件名有.class后缀
+     * @return 字节码数组
+     */
+    abstract byte[] readClass(String className) throws Exception;
+
+    /**
+     * 打印class名
+     * @return 返回className的字符串表示形式;
+     */
+    abstract String printClassName();
+
+    /**
+     * 工厂方法,根据传入的path的形式不同，调用不同的方法创建不同的Entry
+     * @param path 命令行得到的路径字符串
+     * @return 创建具体的不同的Entry
+     */
+    public static Entry createEntry(String path){
+        if (path != null) {
+            if (path.contains(PATH_SEPARATOR)) {
+                return new CompositeEntry(path, PATH_SEPARATOR);
+            } else if (path.contains("*")) {
+                return new WildcardEntry("");
+            } else if (path.contains(".jar") || path.contains(".JAR") || path.contains(".zip")
+                    || path.contains("" + ".ZIP")) {
+                return new ZipJarEntry(path);
+            }
+            return new DirEntry(path);
+        } else {
+            //如果命令行中没有显式的指定-cp选项,那么默认要找的class就在当前路径下
+            File file = new File("");
+            try {
+                //获取当前路径的标准形式
+                path = file.getCanonicalPath();
+                return new DirEntry(path);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        throw new RuntimeException("Illegal classpath format,or you should point out the classpath explicitly");
+        }
+}
+
+```
+
+### DirEntry
+
+这应该是最简单的一种使用场景了,构造方法中传入的字符串表示目录形式的类路径,这里拿到的直接就是指定的路径,那么先判断该路径是否存在,如果存在,那么和className拼接起来,使用IO流读取其中的字节码,并返回
+
+```java
+package classPath;
+
+import java.io.*;
+
+/**
+ *  Author:ZeonHon
+ *  Date:08-16-2024
+ *  Description:表示目录形式的类路径
+ */
+public class DirEntry extends Entry{
+    private String absDir;
+    public DirEntry(String path) {
+        File dir = new File(path);
+        //若文件存在，则获取其绝对路径并存储
+        if(dir.exists()) {
+            absDir = dir.getAbsolutePath();
+        }
+    }
+
+    @Override
+    String printClassName() {
+        return absDir;
+    }
+    @Override
+    public byte[] readClass(String className) throws IOException {
+        File file = new File(absDir, className);
+        if (!file.exists()) {
+            throw new FileNotFoundException("File not found: " + file.getAbsolutePath());
+        }
+        try (BufferedInputStream in = new BufferedInputStream(new FileInputStream(file));
+             ByteArrayOutputStream out = new ByteArrayOutputStream(1024)) {
+
+            byte[] temp = new byte[1024];
+            int len = 0;
+            while ((len = in.read(temp)) != -1) {
+                out.write(temp, 0, len);
+            }
+            // 直接返回 ByteArrayOutputStream 的 toByteArray 方法的结果
+            return out.toByteArray();
+        }
+    }
+
+}
+
+```
+
+### ZipJarEntry
+
+由于篇幅有限，所以代码放在GitHub上，可以通过左侧的项目链接进行查看！
+
+这种使用场景是指定了一个zip文件或者jar包的情况,那么需要解决的问题是如何拿到压缩文件中的文件,这里主要使用了java.util.zip包下的类来拿到文件,使用zipFile来读取文件和读取普通的文件夹类似,这里只管把zip文件当成文件夹就好
+
+这里有一点要注意的是:
+
+如果是zip文件,在获取ZipEntry的时候ZipEntry ze = zipFile.getEntry(zipName + "/" + className)
+
+如果是jar包,在获取ZipEntry的时候,ZipEntry ze = zipFile.getEntry(className)
+
+### WildcardEntry
+
+这种使用场景是指定了一个形如aa/bb/*的路径,这种路径表明我们的class文件在aa/bb/路径下的jar包中,所以我们只要遍历该路径下的所有以.jar结尾的文件,然后调用ZipJarEntry的实现方法,即可以获得字节码.
+
+### CompositeEntry
+
+这种使用场景是包含多个路径的情况,(eg:a1/b1/c1;a2/b2/c2;a3/b3/c3),那么遇到这种情况,需要将字符串分割成不同的子串,注意分割符在不同的系统下是不同的,这里仅仅实现windows,其它情况下视为unix
+
+### classPath对外的统一使用接口
+
+构造方法:传入解析到的 -Xjre来的路径和-cp的路径,当然在Cmd类中,这两个路径的初始值都是空字符串,而不是null,然后根据二者的值进行解析
+
+# 第三章 类文件
+
+class文件就是经过javac命令编译之后生成的字节码文件，是由字节组成的，为了描述class文件格式，Java虚拟机规范定义了u1、u2和u4三种数据类型来表示1、2和4字节无符号整数
+
+**class文件的基本结构:**
+
+```java
+ClassFile {
+  u4 magic;	//魔数
+  u2 minor_version;	//次版本号
+  u2 major_version;	//主版本号
+  u2 constant_pool_count;	//常量池大小
+  cp_info constant_pool[constant_pool_count-1]; //常量池
+  u2 access_flags;	//类访问标志,表明class文件定义的是类还是接口，访问级别是public还是private，等
+  u2 this_class;	//
+  u2 super_class;	//
+  u2 interfaces_count;	//本类实现的接口数量
+  u2 interfaces[interfaces_count];	//实现的接口,存放在数组中
+  u2 fields_count;		//本来中含有字段数
+  field_info fields[fields_count];	//数组中存放这各个字段
+  u2 methods_count;		//本类中含有的方法数
+  method_info methods[methods_count];	//数组中存放着各个方法
+  u2 attributes_count;			//本类中含有的属性数量;
+  attribute_info attributes[attributes_count];	//数组中存放着各个属性
+}
+```
+
+## 各部分解读
+
+### 魔数
+
+魔数是class文件的前4个字节，用来表明该文件是否为class文件，魔数是固定的，class 文件的魔数是“0xCAFEBABE”
+
+### 版本号
+
+- 次版本号(m):2 字节
+
+- 主版本号(M):2 字节
+
+完整的版本号可以表示成“M.m”的形式，次版本号只在 J2SE 1.2 之前用过，从 1.2 开始基本上就没什么用了（都是 0）。主版本号在 J2SE 1.2 之前是 45，从 1.2 开始，每次有大的 Java 版本发布，都会加1
+
+### 常量池
+
+内容较多，放在下一章讲
+
+### 访问标志
+
+这个标示用来识别类或者接口的访问信息，两字节供 16 位，目前只定义了 8 位，没有用到的一律用 0 来填充，以备以后的拓展使用
+
+| 标志名称	| 标志值 | 含义 |
+| --------- | ----- | ----- |
+| ACC_PUBLIC	| 0x0001	| 是否为 public 类型 |
+| ACC_FINAL	| 0x0010	| 是否被声明为 final，只有类可设置 |
+| ACC_SUPER	| 0x0020	| 是否允许使用 invokespecial 字节码指令的新语义，JDK1.0.2 之后编译出来的这个标志都必须为 1 |
+| ACC_INTERFACE	| 0x0200	| 标示这是一个接口 |
+| ACC_ABSTRACT	| 0x0400	| 是否为 abstract 类型，对于接口或者抽象类来说，此标志为真，其他类值为假 |
+| ACC_SYNTHETIC	| 0x1000	| 标志这个类并非由用户代码产生的 |
+| ACC_ANNOTATION	| 0x2000	| 标志这是一个注解 |
+| ACC_ENUM	| 0x4000	| 标志这是一个枚举 |
+
+### 类索引
+
+用于确定这个类的全限定名，类索引说白了就是一个指向常量池的索引值，那么直接用一个 int 值来表示即可
+
+### 父类索引
+
+用于确定这个类的父类的全限定名
+
+由于 Java 语言不允许多继承，所以其父类索引只有一个。除了 java.lang.Obect 之外,所有的 Java 类都有父类，所以除了 java.lang.Obect 的父类索引为 0，其余都不为 0
+
+同理，父类索引也是直接用一个 int 值来表示
+
+### 接口索引集合
+
+父类索引之后是 u2 类型数据的接口索引集合。用来表述这个类实现了哪些接口。按照 implements 语句后面的接口顺序从前向后在接口索引集合中。
+
+入口的第一项是 u2 类型的接口计数器，表示接口索引表的大小，如果该类没有实现接口，则计数器为 0，后面的接口索引表不占用任何字节。
+
+因为有可能实现了多个接口，所以使用一个数组来盛放实习了接口在常量池中的索引值
+
+### 字段表集合
+
+字段表用来描述类或接口中声明的变量。包括静态变量和非静态变量
+
+### 方法表集合
+
+方法表的第一个字段是访问修饰符，和字段表访问修饰符类似，不同的是：因为 volatile 和 transient 关键字不能修饰方法，所以方法表的访问标志中没有这这两项，但是添加了 synchronized，native，strictfp，abstract 等可用来修饰方法的关键字
+
+### 属性表
+
+比较复杂，后面再说
+
+# 第四章 常量池
+
+## 常量池在class文件中的格式
+
+> 常量池占据了 class 文件很大一部分数据，里面存放着各式各样的常量信息，包括数字和字符串常量、类和接口名、字段和方法名等。本节将详细介绍常量池和各种常量
+
+```java
+ClassFile {
+  ...
+  u2 constant_pool_count;	//常量池大小
+  cp_info constant_pool[constant_pool_count-1]; //常量池
+  ...
+}
+```
+
+常量池大小由一个u2类型的变量来表示，表明了常量池最大为2^16-1
+
+接下来根据这个大小,生成常量信息数组，注意：
+
+表头给出的常量池大小比实际大 1,所以这样的话,虽然可能生成了这么大的,但是 0 不使用,直接从 1 开始;
+
+有效的常量池索引是 1~n–1。0 是无效索引，表示不指向任何常量
+
+CONSTANT_Long_info 和 CONSTANT_Double_info 各占两个位置。也就是说，如果常量池中存在这两种常量，实际的常量数量比 n–1 还要少，这也导致了 1~n–1 的某些数也会变成无效索引
+
+## 常量池中常量的分类
+
+常量池中的常量分为**字面量（literal）**和**符号引用（symbolic reference）**
+
+字面量；文本字符串,声明为 final 的常量值等
+
+- 数字常量
+
+- 字符串常量
+
+符号引用：Javac 在编译的时候,没有像 c 语言那样的”连接”这一步,而是在加载 class 文件的时候动态加载,拿到该符号引用指向的字符串,再使用反射,加载相应的类
+
+- 类
+
+- 接口
+
+- 字段
+
+- 方法
+
+字面量是可以直接获取到其值的,而符号引用是通过索引直接或者间接指向 CONSTANT_Utf8_info 常量,然后拿到其字面量的
+
+# 第五章 属性表
+
