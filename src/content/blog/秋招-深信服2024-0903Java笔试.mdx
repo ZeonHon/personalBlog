@@ -1,0 +1,299 @@
+---
+title: "秋招-深信服2021-0903Java笔试"
+description: "2024-0903深信服Java笔试C卷，编程题四道"
+pubDate: "09 03 2024"
+categories:
+  - tech
+tags:
+  - 算法
+  - 秋招
+---
+
+# 题目一:求个位数
+
+## 题目描述
+
+输入x，y；输出x的y次方的个位数是多少？
+
+### 代码实现
+
+通过率100%
+
+```java
+import java.util.Scanner;
+
+// 注意类名必须为 Main, 不要有任何 package xxx 信息
+public class Main {
+    public static void main(String[] args) {
+        Scanner in = new Scanner(System.in);
+        int x = in.nextInt();
+        int y = in.nextInt();
+        
+        int lastDigitX = x % 10;
+        if(lastDigitX == 0 || lastDigitX == 1 || lastDigitX == 5 || lastDigitX == 6) {
+            System.out.println(lastDigitX);
+        }
+
+        int cycleLength = 4;
+        int modY = y % cycleLength;
+        if(modY == 0) {
+            modY = cycleLength;
+        }
+
+        int lastDigit = 1;
+        for(int i = 0; i < modY; i++) {
+            lastDigit *= lastDigitX;
+            lastDigit %= 10;
+        }
+
+        System.out.println(lastDigit);
+    }
+}
+```
+
+# 题目二:判断多组ip的连通性
+
+## 题目描述
+
+第一行输入n，m表示已知的ip地址数量和连通关系
+
+接下来n行每一行包括一个字符串和一个整数，代表一个ip地址和编号
+
+接下来m行每一行包括两个整数a，表示ip地址对应的编号a和b之间有连通关系
+
+接下来一行包括一个整数q，表示需要判断连通性的ip地址数量
+
+接下来q行，每行包括两个字符串，表示需要判断连通性的两个ip地址
+
+### 代码实现
+
+通过率100%
+
+```java
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Scanner;
+
+// 注意类名必须为 Main, 不要有任何 package xxx 信息
+public class Main {
+    private static Map<String , Integer> ipMap = new HashMap<>();
+    private static List<List<Integer>> graph;
+    private static boolean[] visited; 
+    public static void main(String[] args) {
+        Scanner in = new Scanner(System.in);
+        int n = in.nextInt();
+        int m = in.nextInt();
+
+        for(int i = 0; i < n; i++) {
+            String ipAddress = in.next();
+            int id = in.nextInt();
+            ipMap.put(ipAddress , id);
+        }
+
+        graph = new ArrayList<>();
+        for(int i = 0; i <= n; i++) {
+            graph.add(new ArrayList<>());
+        }
+
+        for(int i = 0; i < m; i++) {
+            int a = in.nextInt();
+            int b = in.nextInt();
+
+            graph.get(a).add(b);
+            graph.get(b).add(a);
+        }
+
+        int q = in.nextInt();
+        for(int i = 0; i < q; i++) {
+            String ip1 = in.next();
+            String ip2 = in.next();
+            int id1 = ipMap.get(ip1);
+            int id2 = ipMap.get(ip2);
+            visited = new boolean[n + 1];
+            System.out.println(isConnected(id1 , id2) ? "Yes" : "No");
+        }
+    }
+
+    private static boolean isConnected(int start , int end) {
+        dfs(start);
+        return visited[end];
+    }
+
+    private static void dfs(int node) {
+        visited[node] = true;
+        for(int neighbor : graph.get(node)) {
+            if(!visited[neighbor]) {
+                dfs(neighbor);
+            }
+        }
+    }
+}
+```
+
+# 题目三:路径化简
+
+## 题目描述
+
+在unix系统上，磁盘上的文件会包含两部分信息,1是当前目录CWD，2是文件路径PATH
+
+现在编写程序来化简路径，遵循以下规则
+
+当path以/开头时，只化简path;
+
+path中允许使用..表示上一级，.表示当前级
+
+允许多个/作为路径分隔，最终的结果只保留一个
+
+/的上一级和当前级都是/
+
+### 代码实现
+
+通过率100%
+
+```java
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Scanner;
+
+// 注意类名必须为 Main, 不要有任何 package xxx 信息
+public class Main {
+    public static void main(String[] args) {
+        Scanner in = new Scanner(System.in);
+        int n = in.nextInt();
+        in.nextLine();
+
+        for(int i = 0; i < n; i++) {
+            String input = in.nextLine();
+            String[] parts = input.split(" ");
+            String cwd = parts[0].trim();
+            String path = parts[1].trim();
+            System.out.println(simplifyPath(cwd,path));
+        }
+    }
+
+    private static String simplifyPath(String cwd , String path) {
+        Deque<String> stack = new ArrayDeque<>();
+        String[] cwdParts = cwd.split("/");
+        String[] pathParts = path.split("/");
+
+        for(String part : cwdParts) {
+            if(!part.isEmpty()) {
+                stack.push(part);
+            }
+        }
+        
+        boolean useCwd = path.startsWith("/");
+        if(!useCwd) {
+            for(String part : pathParts) {
+                if(part.equals("..")) {
+                    if(!stack.isEmpty()) {
+                        stack.pop();
+                    }
+                } else if(!part.isEmpty() && !part.equals(".")) {
+                    stack.push(part);
+                }
+            }
+        } else {
+            stack.clear();
+            for(int j = 1; j < pathParts.length; j++) {
+                String part = pathParts[j];
+                if(part.equals("..")) {
+                    if(!stack.isEmpty()) {
+                        stack.pop();
+                    }
+                } else if(!part.isEmpty() && !part.equals(".")) {
+                    stack.push(part);
+                }
+            }
+        }
+
+        StringBuilder simplifiedPath = new StringBuilder();
+        while(!stack.isEmpty()) {
+            simplifiedPath.insert(0, "/" + stack.pop());
+        }
+
+        return simplifiedPath.length() > 0 ? simplifiedPath.toString() : "/";
+    }
+}
+```
+
+# 题目四:任务处理
+
+## 题目描述
+
+有n个任务交给小明和小白处理，小明和小白需要对其中的k个任务进行编辑，编辑的过程如下；n个任务按顺序排列，他们删除n-k个任务，不改变剩下的k个任务的顺序，然后小明选取全部任务的前面一部分任务（可能不选或者选所有），小白选剩下的，之后他们分别对各自的任务进行编辑，编辑所需的时间取决于二者中较长的那个
+
+第一行包含一个整数，表示测试用例的数量
+
+每个测试用例第一行包括两个整数n和k，表示完整任务集中的任务数量以及二者即将进行编辑的任务数量
+
+第二行包含n个整数代表每个编辑所需的时间
+
+### 代码实现
+
+通过率20%(还在复盘中)
+
+大致上使用贪心的思路去做的
+
+```java
+import java.util.Arrays;
+import java.util.Scanner;
+
+// 注意类名必须为 Main, 不要有任何 package xxx 信息
+public class Main {
+    public static void main(String[] args) {
+        Scanner in = new Scanner(System.in);
+        int t  = in.nextInt();
+
+        for(int testCase = 0; testCase < t; testCase++) {
+            int n = in.nextInt();
+            int k = in.nextInt();
+
+            int[] tasks = new int[n];
+            for(int i = 0; i < n; i++) {
+                tasks[i] = in.nextInt();
+            }
+            System.out.println(minimizeTime(tasks , k));
+        }
+    }
+
+    private static int minimizeTime(int[] tasks , int k) {
+        
+        int minTime = Integer.MAX_VALUE;
+        int[] remainingTasks = delete(tasks , k);
+        
+        for(int i = 0; i <= k; i++) {
+            int timeA = i == 0 ? 0 : sumArray(remainingTasks , 0 , i);
+            int timeB = (k - i) == 0 ? 0 : sumArray(remainingTasks , i , k - i);
+
+            int maxTime = Math.max(timeA , timeB);
+            minTime = Math.min(minTime , maxTime);
+        }
+        return minTime;
+    }
+
+    private static int[] delete(int[] tasks , int k) {
+        Arrays.sort(tasks);
+        return Arrays.copyOfRange(tasks , 0, k);
+    }
+    private static int sumArray(int[] array , int start , int length) {
+        int sum = 0;
+        for(int i = start; i < start + length; i++) {
+            sum += array[i];
+        }
+        return sum;
+    }
+}
+```
+
+# 总结
+
+一拖再拖这是最后一次深信服笔试的机会了，因为前面两次都和别的笔试冲突了，总的来说14道选择题并不是全部都是基础，有一些跟素质测评里面的题很像(也有点像考公的那种感觉)
+
+四个编程题，最后一题还是有一点难度的，主要是时间分配的问题，继续努力
+
+**Inner peace~**
+
+last update: 2024-09-03
