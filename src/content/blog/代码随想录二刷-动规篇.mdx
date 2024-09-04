@@ -156,3 +156,243 @@ class Solution {
 }
 ```
 
+# 题四、单词拆分
+
+力扣链接:https://leetcode.cn/problems/word-break/
+
+## 题目描述
+
+给定一个非空字符串 s 和一个包含非空单词的列表 wordDict，判定 s 是否可以被空格拆分为一个或多个在字典中出现的单词。
+
+说明：
+
+拆分时可以重复使用字典中的单词
+
+你可以假设字典中没有重复的单词
+
+### 代码实现
+
+```java
+class Solution {
+    public boolean wordBreak(String s, List<String> wordDict) {
+        HashSet<String> set = new HashSet<>(wordDict);
+        boolean[] valid = new boolean[s.length() + 1];
+        valid[0] = true;
+
+        for (int i = 1; i <= s.length(); i++) {
+            for (int j = 0; j < i && !valid[i]; j++) {
+                if (set.contains(s.substring(j, i)) && valid[j]) {
+                    valid[i] = true;
+                }
+            }
+        }
+
+        return valid[s.length()];
+    }
+}
+```
+
+# 题五、打家劫舍
+
+力扣链接:https://leetcode.cn/problems/house-robber/
+
+## 题目描述
+
+你是一个专业的小偷，计划偷窃沿街的房屋。每间房内都藏有一定的现金，影响你偷窃的唯一制约因素就是相邻的房屋装有相互连通的防盗系统，如果两间相邻的房屋在同一晚上被小偷闯入，系统会自动报警。
+
+给定一个代表每个房屋存放金额的非负整数数组，计算你 不触动警报装置的情况下 ，一夜之内能够偷窃到的最高金额
+
+### 思路
+
+1. 确定dp[i]的含义:dp[i]表示考虑偷取前i个房屋能偷窃到的最高金额
+
+2. 确定dp[i]的转移方程:dp[i] = Math.max(dp[i - 1], dp[i - 2] + nums[i])
+
+决定dp[i]的因素就是第i房间偷还是不偷。
+
+如果偷第i房间，那么dp[i] = dp[i - 2] + nums[i] ，即:第i-1房一定是不考虑的，找出下标i-2（包括i-2）以内的房屋，最多可以偷窃的金额为dp[i-2] 加上第i房间偷到的钱。
+
+如果不偷第i房间，那么dp[i] = dp[i - 1]，即考虑i-1房，（注意这里是考虑，并不是一定要偷i-1房）
+
+3. 初始化dp[0]和dp[1]
+
+从递推公式dp[i] = max(dp[i - 2] + nums[i], dp[i - 1]);可以看出，递推公式的基础就是dp[0]和dp[1]
+
+从dp[i]的定义上来讲，dp[0] 一定是 nums[0]，dp[1]就是nums[0]和nums[1]的最大值即：dp[1] = max(nums[0], nums[1]);
+
+```java
+// 动态规划
+class Solution {
+	public int rob(int[] nums) {
+		if (nums == null || nums.length == 0) return 0;
+		if (nums.length == 1) return nums[0];
+
+		int[] dp = new int[nums.length];
+		dp[0] = nums[0];
+		dp[1] = Math.max(dp[0], nums[1]);
+		for (int i = 2; i < nums.length; i++) {
+			dp[i] = Math.max(dp[i - 1], dp[i - 2] + nums[i]);
+		}
+
+		return dp[nums.length - 1];
+	}
+}
+```
+
+# 题六、打家劫舍 II
+
+力扣链接:https://leetcode.cn/problems/house-robber-ii/
+
+## 题目描述
+
+你是一个专业的小偷，计划偷窃沿街的房屋，每间房内都藏有一定的现金。这个地方所有的房屋都**围成一圈，这意味着第一个房屋和最后一个房屋是紧挨着的**。同时，相邻的房屋装有相互连通的防盗系统，如果两间相邻的房屋在同一晚上被小偷闯入，系统会自动报警 。
+
+给定一个代表每个房屋存放金额的非负整数数组，计算你在不触动警报装置的情况下，能够偷窃到的最高金额
+
+### 思路
+
+和上一题的区别就在于这次的房屋首尾是相连的
+
+这种时候就要考虑几种情况，首尾不偷、偷首不偷尾，偷尾不偷首(其实第二三种情况是把第一种包含在内的)
+
+```java
+class Solution {
+    public int rob(int[] nums) {
+        if (nums == null || nums.length == 0)
+            return 0;
+        int len = nums.length;
+        if (len == 1)
+            return nums[0];
+        return Math.max(robAction(nums, 0, len - 1), robAction(nums, 1, len));
+    }
+
+    int robAction(int[] nums, int start, int end) {
+        //x表示当前遍历到的房屋前两间房屋所能获得的最大金额
+        //y表示表示当前遍历到的房屋前一间房屋所能获得的最大金额
+        //z表示当前遍历到的房屋时所能获得的最大金额
+        int x = 0, y = 0, z = 0;
+        for (int i = start; i < end; i++) {
+            y = z;
+            z = Math.max(y, x + nums[i]); //相当于这条公式dp[i] = Math.max(dp[i - 1], dp[i - 2] + nums[i]);
+            x = y;
+        }
+        return z;
+    }
+}
+```
+
+# 题七、打家劫舍III
+
+力扣链接:https://leetcode.cn/problems/house-robber-iii/
+
+## 题目描述
+
+在上次打劫完一条街道之后和一圈房屋后，小偷又发现了一个新的可行窃的地区。这个地区只有一个入口，我们称之为“根”。 除了“根”之外，每栋房子有且只有一个“父“房子与之相连。一番侦察之后，聪明的小偷意识到“这个地方的所有房屋的排列类似于一棵二叉树”。 如果两个直接相连的房子在同一天晚上被打劫，房屋将自动报警。
+
+计算在不触动警报的情况下，小偷一晚能够盗取的最高金额
+
+### 思路
+
+对于树的话，首先就要想到遍历方式，前中后序（深度优先搜索）还是层序遍历（广度优先搜索）
+
+本题一定是要后序遍历，因为通过递归函数的返回值来做下一步计算
+
+与198.打家劫舍，213.打家劫舍II一样，关键是要讨论当前节点抢还是不抢。
+
+如果抢了当前节点，两个孩子就不能动，如果没抢当前节点，就可以考虑抢左右孩子（注意这里说的是“考虑”）
+
+这里可以使用一个长度为2的数组，记录当前节点偷与不偷所得到的的最大金钱
+
+```java
+    // 状态标记递归
+    // 不偷：Max(左孩子不偷，左孩子偷) + Max(右孩子不偷，右孩子偷)
+    // root[0] = Math.max(rob(root.left)[0], rob(root.left)[1]) +
+    // Math.max(rob(root.right)[0], rob(root.right)[1])
+    // 偷：左孩子不偷+ 右孩子不偷 + 当前节点偷
+    // root[1] = rob(root.left)[0] + rob(root.right)[0] + root.val;
+    public int rob3(TreeNode root) {
+        int[] res = robAction1(root);
+        return Math.max(res[0], res[1]);
+    }
+
+    int[] robAction1(TreeNode root) {
+        int res[] = new int[2];
+        if (root == null)
+            return res;
+
+        int[] left = robAction1(root.left);
+        int[] right = robAction1(root.right);
+
+        res[0] = Math.max(left[0], left[1]) + Math.max(right[0], right[1]);
+        res[1] = root.val + left[0] + right[0];
+        return res;
+    }
+```
+
+# 题八、买卖股票的最佳时机
+
+力扣链接:https://leetcode.cn/problems/best-time-to-buy-and-sell-stock/
+
+## 题目描述
+
+给定一个数组，它的第i个元素是一支给定的股票在第i天的价格
+
+如果你最多只允许完成一笔交易（即买入和卖出一支股票），设计一个算法来计算你所能获取的最大利润
+
+注意你不能在买入股票前卖出股票
+
+### 思路
+
+本题贪心和dp都可以做，第一次做这道题是用的贪心，所以这里使用dp
+
+```java
+class Solution {
+    public int maxProfit(int[] prices) {
+        if (prices == null || prices.length == 0) return 0;
+        int length = prices.length;
+        // dp[i][0]代表第i天持有股票的最大收益
+        // dp[i][1]代表第i天不持有股票的最大收益
+        int[][] dp = new int[length][2];
+        int result = 0;
+        dp[0][0] = -prices[0];
+        dp[0][1] = 0;
+        for (int i = 1; i < length; i++) {
+            dp[i][0] = Math.max(dp[i - 1][0], -prices[i]);
+            dp[i][1] = Math.max(dp[i - 1][0] + prices[i], dp[i - 1][1]);
+        }
+        return dp[length - 1][1];
+    }
+}
+```
+
+# 题九、买卖股票的最佳时机 II
+
+力扣链接:https://leetcode.cn/problems/best-time-to-buy-and-sell-stock-ii/
+
+## 题目描述
+
+给定一个数组，它的第i个元素是一支给定的股票在第i天的价格
+
+设计一个算法来计算你所能获取的最大利润。你可以尽可能地完成更多的交易（多次买卖一支股票）
+
+### 思路
+
+和上一题差不多，唯一区别是本题股票可以买卖多次了（注意只有一只股票，所以再次购买前要出售掉之前的股票）
+
+```java
+// 动态规划
+class Solution {
+    // 可以将每天持有与否的情况分别用 dp[i][0] 和 dp[i][1] 来进行存储
+    public int maxProfit(int[] prices) {
+        int n = prices.length;
+        int[][] dp = new int[n][2];     // 创建二维数组存储状态
+        dp[0][0] = 0;                   // 初始状态
+        dp[0][1] = -prices[0];
+        for (int i = 1; i < n; ++i) {
+            dp[i][0] = Math.max(dp[i - 1][0], dp[i - 1][1] + prices[i]);    // 第 i 天，没有股票
+            dp[i][1] = Math.max(dp[i - 1][1], dp[i - 1][0] - prices[i]);    // 第 i 天，持有股票
+        }
+        return dp[n - 1][0];    // 卖出股票收益高于持有股票收益，因此取[0]
+    }
+}
+```
