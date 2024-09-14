@@ -1,0 +1,148 @@
+---
+title: "秋招-虾皮Shopee-2024-0914Java笔试"
+description: "09-14-2024 虾皮Shopee秋招Java方向笔试大题3道的解答"
+pubDate: "09 14 2024"
+categories:
+  - tech
+tags:
+  - 算法
+  - 秋招
+---
+
+一共10道单选题，5道多选，3道编程题，难度不大
+
+三道编程题都是dp，用的的核心代码模式(就是力扣那种)，不是常规的ACM模式
+
+# 题一、摆动序列
+
+如果连续数字之间的差严格地在正数和负数之间交替，则数字序列称为摆动序列。第一个差（如果存在的话）可能是正数或负数。少于两个元素的序列也是摆动序列。
+
+例如， [1,7,4,9,2,5] 是一个摆动序列，因为差值 (6,-3,5,-7,3)  是正负交替出现的。相反, [1,4,7,2,5]  和  [1,7,4,5,5] 不是摆动序列，第一个序列是因为它的前两个差值都是正数，第二个序列是因为它的最后一个差值为零。
+
+给定一个整数序列，返回作为摆动序列的最长子序列的长度。 通过从原始序列中删除一些（也可以不删除）元素来获得子序列，剩下的元素保持其原始顺序。
+
+示例 1:
+
+输入: [1,7,4,9,2,5]
+
+输出: 6
+
+解释: 整个序列均为摆动序列
+
+## 代码实现
+
+**通过率100%**
+
+也可以用dp做，本次三道题目其实都是简单dp
+
+```java
+class Solution {
+    public int wiggleMaxLength(int[] nums) {
+        if (nums.length <= 1) {
+            return nums.length;
+        }
+        //当前差值
+        int curDiff = 0;
+        //上一个差值
+        int preDiff = 0;
+        int count = 1;
+        for (int i = 1; i < nums.length; i++) {
+            //得到当前差值
+            curDiff = nums[i] - nums[i - 1];
+            //如果当前差值和上一个差值为一正一负
+            //等于0的情况表示初始时的preDiff
+            if ((curDiff > 0 && preDiff <= 0) || (curDiff < 0 && preDiff >= 0)) {
+                count++;
+                preDiff = curDiff;
+            }
+        }
+        return count;
+    }
+}
+```
+
+# 题二、网格路径和
+
+给你一个m x n的网格，其中每个单元格有一个数字代表经过它所需要花费的能量。每次只能往下或者往右移动一格
+
+请你返回从左上角到右下角的最小总能量。
+
+示例 1：
+
+输入：grid = [[1,3,1],[1,5,1],[4,2,1]]
+
+输出：7
+
+## 代码实现
+
+**通过率100%**
+
+```java
+public class MinEnergyPath {
+
+    public static int minEnergy(int[][] grid) {
+        int m = grid.length;
+        int n = grid[0].length;
+
+        int[][] dp = new int[m][n];
+        
+        // 设置初始值
+        dp[0][0] = grid[0][0];
+
+        // 初始化第一行
+        for (int j = 1; j < n; j++) {
+            dp[0][j] = dp[0][j - 1] + grid[0][j];
+        }
+
+        // 初始化第一列
+        for (int i = 1; i < m; i++) {
+            dp[i][0] = dp[i - 1][0] + grid[i][0];
+        }
+
+        // 动态规划填充dp数组
+        for (int i = 1; i < m; i++) {
+            for (int j = 1; j < n; j++) {
+                dp[i][j] = grid[i][j] + Math.min(dp[i - 1][j], dp[i][j - 1]);
+            }
+        }
+
+        // 返回到达右下角的最小能量消耗
+        return dp[m - 1][n - 1];
+    }
+}
+```
+
+# 题三、购物车难题
+
+购物车中有N个商品，总价为X，现在账户的余额有M元，且总价超过M，如何从N个商品中挑选出一个子集，使得子集中商品总价不超过M，且子集中的商品总价最大
+
+## 代码实现
+
+**通过率100%**
+
+```java
+import java.util.Arrays;
+
+public class ShoppingCartOptimizer {
+
+    public static int findClosestSubsetCost(int[] goods_list, int balance) {
+        //表示不超过balance预算下的最大商品总价
+        int[] dp = new int[balance + 1];
+        
+        for (int cost : goods_list) {
+            for (int j = balance; j >= cost; j--) {
+                dp[j] = Math.max(dp[j], dp[j - cost] + cost);
+            }
+        }
+        return dp[balance];
+    }
+}
+```
+
+# 总结
+
+难度不算大，还是蛮简单的，最近一直在准备八股和敲项目所以更新得比较少，逐渐恢复一下！！！
+
+**Inner peace~**
+
+last update: 09-14-2024
