@@ -1,0 +1,215 @@
+---
+title: "秋招-途虎养车2024-0919Java笔试"
+description: "09-19-2024 途虎养车秋招Java方向笔试大题3道的解答"
+pubDate: "09 19 2024"
+categories:
+  - tech
+tags:
+  - 算法
+  - 秋招
+---
+
+# 题目一:订单号有效检验
+
+## 题目描述
+
+给定一个字符串，判断是否为订单号，订单号规则为：
+
+- 订单号长度为10
+- 订单号必须以不重复的6位大写字母开头
+- 订单号后四位为不为0的数字
+
+### 代码实现
+
+**通过率100%**
+
+```java
+import java.util.*;
+
+public class Solution {
+    /**
+     * 代码中的类名、方法名、参数名已经指定，请勿修改，直接返回方法规定的值即可
+     *
+     * 订单号有效性检验
+     * 订单号长度为10；前六位一定是不重复的大写字母；后四位是不以0开头的数字
+     * @param orderNumber string字符串 订单号
+     * @return bool布尔型
+     */
+    public boolean isValidOrderNumber (String orderNumber) {
+        // write code here
+        if(orderNumber.length() != 10) {
+            return false;
+        }
+        String letterPart = orderNumber.substring(0 , 6);
+        if(!isAllUpperCaseAndUnique(letterPart)) {
+            return false;
+        }
+        String numberPart = orderNumber.substring(6);
+        if(!isNumberValid(numberPart)) {
+            return false;
+        }
+        return true;
+    }
+    //判断字母部分是否合法，即不重复，且全大写
+    private static boolean isAllUpperCaseAndUnique(String str) {
+        for(char c : str.toCharArray()) {
+            if(c < 'A' || c > 'Z') {
+                return false;
+            }
+        }
+        boolean[] seen = new boolean[26];
+        for(char c : str.toCharArray()) {
+            int index = c - 'A';
+            if(seen[index]) {
+                return false;
+            }
+            seen[index] = true;
+        }
+        return true;
+    }
+    //判断数字部分是否合法，即不为0开头
+    private static boolean isNumberValid(String str) {
+        if(str.charAt(0) == '0') {
+            return false;
+        }
+        for(char c : str.toCharArray()) {
+            if(c < '0' || c > '9') {
+                return false;
+            }
+        }
+        return true;
+    }
+}
+```
+
+# 题目二:项目管理
+
+## 题目描述
+
+给定三个数组，一个start数组代表项目的开始时间，一个end数组代表项目的结束时间，一个profit数组代表项目的收益
+
+一次只能进行一个项目，结束一个项目之后可以立刻进行下一个项目，请问如何安排才可以使得收益最大，输出最大的收益
+
+### 代码实现
+
+**通过率100%**
+
+```java
+import java.util.*;
+
+public class Solution {
+    static class Job {
+        int start;
+        int end;
+        int profit;
+        public Job(int start , int end , int profit) {
+            this.start = start;
+            this.end = end;
+            this.profit = profit;
+        }
+    }
+    /**
+     * 代码中的类名、方法名、参数名已经指定，请勿修改，直接返回方法规定的值即可
+     *
+     * 
+     * @param startTime int整型一维数组 
+     * @param endTime int整型一维数组 
+     * @param profit int整型一维数组 
+     * @return int整型
+     */
+    public int jobScheduling (int[] startTime, int[] endTime, int[] profit) {
+       int n = startTime.length;
+       Job[] jobs = new Job[n];
+       for(int i = 0; i < n; i++) {
+        jobs[i] = new Job(startTime[i] , endTime[i] , profit[i]);
+       }
+       Arrays.sort(jobs , Comparator.comparingInt(o -> o.end));
+       int[] dp = new int[n + 1];
+
+       for(int i = 1; i <= n; i++) {
+            int prev = findLastNonConfilctJob(jobs , i - 1);
+            dp[i] = Math.max(dp[i - 1] , (prev == -1 ? 0 : dp[prev + 1]) + jobs[i - 1].profit);
+       }
+       return dp[n];
+    }
+
+    private static int findLastNonConfilctJob(Job[] jobs , int index) {
+        for(int j = index - 1; j >= 0; j--) {
+            if(jobs[j].end <= jobs[index].start) {
+                return j;
+            }
+        }
+        return -1;
+    }
+}
+```
+
+
+# 题目三:
+
+## 题目描述
+
+输入一个货物组合链表以及托盘的最大承载重量和最大承载容量，给返回可以存放在这个托盘上的最优的货物组合数量
+
+现在有一个货物列表，每个货物有两个属性，一个是x代表重量，y代表体积
+
+现在给出货车最大的承受重量和容量，试给出最优货物组合中所含的货物数量(最优指的是重量总和以及体积总和没有超过货车的最大承载重量以及最大承载容量)
+
+### 代码实现
+
+**通过率100%**
+
+```java
+import java.util.*;
+
+/*
+ * public class Point {
+ *   int x;
+ *   int y;
+ *   public Point(int x, int y) {
+ *     this.x = x;
+ *     this.y = y;
+ *   }
+ * }
+ */
+
+public class Solution {
+    /**
+     * 代码中的类名、方法名、参数名已经指定，请勿修改，直接返回方法规定的值即可
+     *
+     * 输入一个货物组合链表以及托盘的最大承载重量和最大承载容量，给返回可以存放在这个托盘上的最优的货物组合数量
+     * @param cargoList Point类ArrayList 一组货物
+     * @param maxPalletWeight int整型 托盘最大重量限制
+     * @param maxPalletVolume int整型 托盘最大体积限制
+     * @return int整型
+     */
+    public int optimalCombination (ArrayList<Point> cargoList, int maxPalletWeight, int maxPalletVolume) {
+        // write code here
+        int n = cargoList.size();
+        int[][][] dp = new int[n + 1][maxPalletWeight + 1][maxPalletVolume + 1];
+        for(int i= 1; i <= n; i++) {
+            int weight = cargoList.get(i - 1).x;
+            int volume = cargoList.get(i - 1).y;
+
+            for(int w = 0; w <= maxPalletWeight; w++) {
+                for(int v = 0; v <= maxPalletVolume; v++) {
+                    if(w < weight || v < volume) {
+                        dp[i][w][v] = dp[i - 1][w][v];
+                    } else {
+                        dp[i][w][v] = Math.max(dp[i - 1][w][v] , dp[i - 1][w - weight][v - volume] + 1);
+                    }
+                }
+            }
+        }
+        return dp[n][maxPalletWeight][maxPalletVolume];
+    }
+}
+```
+
+# 总结
+
+难度中等偏上，这两天正在准备两场面试，希望可以顺利！！！
+
+**Inner peace~**
+
+last update: 09-19-2024
