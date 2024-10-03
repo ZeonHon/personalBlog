@@ -1,0 +1,211 @@
+---
+title: "JVM故障诊断与性能调优"
+description: "近期阅读了葛一鸣老师的《JVM故障诊断与性能调优》所以写一篇博客来记录一下学习的收获"
+pubDate: "10 02 2024"
+categories:
+  - tech
+tags:
+  - JVM
+---
+
+# 前言
+
+对于一些理论内容比如内存空间结构，垃圾回收算法的基础理论知识就不在这篇blog里面涉及太多，主要是实战内容
+
+本文将会以JDK8作为示例，贴出的内容除非明确说明，否则就是JDK8
+
+# Chapter One JVM中的常见参数
+
+JVM启动参数分为以下几类:
+
+- 堆内存参数
+- 非堆内存参数(栈...)
+- 垃圾回收器参数
+- 其他参数(如GC参数等)
+
+## 跟踪垃圾回收 - 读懂GC日志
+
+**-XX:+PrintGC**
+
+下面给出一个Java程序，JVM启动参数配置如下:-Xmx10m -Xms10m -XX:+PrintGC
+
+每次循环创建一个3MB大小的字节数组，堆的最大最小容量都设置为10MB，所以很快就会触发GC
+
+```java
+public class JVMPractice {
+
+    public static void main(String[] args) {
+        while (true) {
+            System.out.println("Current Thread: " + Thread.currentThread().getName());
+            //每次创建一个3MB的字节数组
+            byte[] largeObject = new byte[3 * 1024 * 1024]; // 3MB
+            largeObject = null;
+            try {
+                // 每隔1秒打印一次
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+}
+```
+
+GC日志大概如下:
+
+每一行都代表了一次GC行为，先来看第一部分
+
+[GC (Allocation Failure)  5120K->3936K(9728K), 0.0008298 secs]
+
+表示这是一次年轻代的GC行为，GC前堆使用空间为5120K，约5MB；GC后堆使用空间为3936K，约3.9MB；当前堆最大可用空间为9728K，约9.7MB
+
+本次GC总共耗时0.0008298秒
+
+再来看一下第二部分，也是和上面一样的观察思路，但是这一次出现了Full GC (Allocation Failure)的情况，也就是说出现了Full GC
+
+可以从GC日志清楚地看到
+
+[GC (Allocation Failure)  4138K->4138K(9728K), 0.0005562 secs]
+
+[Full GC (Allocation Failure)  4138K->1066K(9728K), 0.0019955 secs]
+
+因为某些原因导致上一次young GC没有对堆内存进行任何空间的回收，所以下一次GC就进行了Full GC，Full GC后堆内存空间使用量明显下降了
+
+```java
+Current Thread: main
+[GC (Allocation Failure)  5120K->3936K(9728K), 0.0008298 secs]
+
+Current Thread: main
+[GC (Allocation Failure)  4179K->4138K(9728K), 0.0011485 secs]
+[GC (Allocation Failure)  4138K->4138K(9728K), 0.0005562 secs]
+[Full GC (Allocation Failure)  4138K->1066K(9728K), 0.0019955 secs]
+
+Current Thread: main
+[GC (Allocation Failure)  4220K->4138K(9728K), 0.0009241 secs]
+[GC (Allocation Failure)  4138K->4138K(9728K), 0.0005578 secs]
+[Full GC (Allocation Failure)  4138K->1051K(9728K), 0.0056338 secs]
+```
+
+**-XX:+PrintGCDetails**
+
+和刚刚的参数不一样的是，-XX:+PrintGCDetails输出GC日志更加详细的信息
+
+我们仍然复用刚刚上面的程序，只对JVM启动参数作一点点小小的调整，可以观察到GC日志如下:
+
+从GC日志可以看出来，PSYoungGen指的是目前JDK8用的垃圾收集器默认为Parallel Scavenge收集器管理年轻代
+
+用的Parallel Old Generation来管理老年代
+
+```java
+Current Thread: main
+[GC (Allocation Failure) [PSYoungGen: 40K->0K(1536K)] 4164K->4123K(8704K), 0.0011001 secs] [Times: user=0.00 sys=0.00, real=0.00 secs] 
+[GC (Allocation Failure) [PSYoungGen: 0K->0K(2048K)] 4123K->4123K(9216K), 0.0004546 secs] [Times: user=0.00 sys=0.00, real=0.00 secs] 
+[Full GC (Allocation Failure) [PSYoungGen: 0K->0K(2048K)] [ParOldGen: 4123K->1051K(7168K)] 4123K->1051K(9216K), [Metaspace: 3955K->3955K(1056768K)], 0.0019538 secs] [Times: user=0.00 sys=0.00, real=0.00 secs] 
+Heap
+ PSYoungGen      total 2048K, used 30K [0x00000000ffd00000, 0x0000000100000000, 0x0000000100000000)
+  eden space 1024K, 3% used [0x00000000ffd00000,0x00000000ffd07b08,0x00000000ffe00000)
+  from space 1024K, 0% used [0x00000000ffe00000,0x00000000ffe00000,0x00000000fff00000)
+  to   space 1024K, 0% used [0x00000000fff00000,0x00000000fff00000,0x0000000100000000)
+ ParOldGen       total 7168K, used 4123K [0x00000000ff600000, 0x00000000ffd00000, 0x00000000ffd00000)
+  object space 7168K, 57% used [0x00000000ff600000,0x00000000ffa06cd0,0x00000000ffd00000)
+ Metaspace       used 3963K, capacity 4568K, committed 4864K, reserved 1056768K
+  class space    used 428K, capacity 460K, committed 512K, reserved 1048576K
+```
+
+下面讲解一下输出的GC日志:
+
+[GC (Allocation Failure) [PSYoungGen: 40K->0K(1536K)] 4164K->4123K(8704K), 0.0011001 secs] [Times: user=0.00 sys=0.00, real=0.00 secs]
+
+第一行指明了GC的原因是Allocation Failure内存分配失败，然后PSYoungGen: 40K->0K(1536K)指的是GC前后年轻代已使用空间从40K变为0K，年轻代最大使用空间为1536K
+
+紧接着4164K->4123K(8704K)指的是GC前后堆内存已使用空间，括号内的是堆内存最大使用空间
+
+紧接着的0.0011001秒指的是GC耗时
+
+再接下来的[Times: user=0.00 sys=0.00, real=0.00 secs]指的是
+
+user=0.00: 用户态CPU时间。
+
+sys=0.00: 系统态CPU时间。
+
+real=0.00 secs: 实际耗时
+
+可以看出来GC的时间非常快(因为程序比较简单)，几乎不会产生任何肉眼可见的停顿
+
+**再来看看GC日志的第三行**
+
+[Full GC (Allocation Failure) [PSYoungGen: 0K->0K(2048K)] [ParOldGen: 4123K->1051K(7168K)] 4123K->1051K(9216K), [Metaspace: 3955K->3955K(1056768K)], 0.0019538 secs] [Times: user=0.00 sys=0.00, real=0.00 secs]
+
+表明这是一次Full GC，和上面的young GC相比只多了
+
+[ParOldGen: 4123K->1051K(7168K)]
+
+指的是老年代的GC信息，解读方式和上述的一样，GC前后老年代已使用内存空间从4123K变为1051K，老年代最大内存空间为7168K
+
+[Metaspace: 3955K->3955K(1056768K)]
+
+指的是元空间的信息(JDK8之后用元空间替代了永久代，并且由元空间实现方法区，元空间存在于系统的直接内存中)，解读方式和上述的一样
+
+结束程序之后，控制台会打印具体的堆信息
+
+```java
+Heap
+ PSYoungGen      total 2048K, used 30K [0x00000000ffd00000, 0x0000000100000000, 0x0000000100000000)
+  eden space 1024K, 3% used [0x00000000ffd00000,0x00000000ffd07b08,0x00000000ffe00000)
+  from space 1024K, 0% used [0x00000000ffe00000,0x00000000ffe00000,0x00000000fff00000)
+  to   space 1024K, 0% used [0x00000000fff00000,0x00000000fff00000,0x0000000100000000)
+ ParOldGen       total 7168K, used 4123K [0x00000000ff600000, 0x00000000ffd00000, 0x00000000ffd00000)
+  object space 7168K, 57% used [0x00000000ff600000,0x00000000ffa06cd0,0x00000000ffd00000)
+ Metaspace       used 3963K, capacity 4568K, committed 4864K, reserved 1056768K
+  class space    used 428K, capacity 460K, committed 512K, reserved 1048576K
+```
+
+这部分信息详细描述了堆的各个区的使用情况，每个区使用情况后面紧跟的三个16进制的数字代表了**新生代的下界**，**当前上界**和**上界**
+
+使用上界减去下界可以得到当前堆空间的最大值
+
+使用当前上界减去下界可以得到当前虚拟机为程序分配的空间
+
+如果当前上界等于上界，表明了堆空间已经没有扩大的可能性了
+
+以第一行为例
+
+0x00000000ffd00000, 0x0000000100000000, 0x0000000100000000
+
+可以看出因为我们设置的最大最小堆内存都为10MB，所以堆内存是没有扩展的可能性的(如果你JVM启动参数Xms和Xmx不一样，当前上界和上界的地址就会不一样)
+
+我们用当前上界减去下界看一下；(0x0000000100000000-0x00000000ffd00000)/1024=3072K
+
+这块空间刚好是等于新生代的eden加from加to的总和，也就是1024+1024+1024=3072K
+
+新生代的可用内存一般是eden区加一个survivor区(from和to其中一个)，在本例中为1024+1024=2048K
+
+(具体为什么有这种差异后面再讲)
+
+对于GC日志输出的常用参数当然不止上述的两种
+
+还有-XX:+PrintGCTimeStamps
+
+-XX:+PrintGCApplicationStoppedTime
+
+-XX:+PrintHeapAtGC
+
+等等等等...
+
+但是很少会用得到，而且光看大段大段的GC日志很麻烦，后面还会讲使用更加方便的GC工具，敬请期待
+
+## 堆内存常见设置参数
+
+堆内存大小可以通过以下参数来设置
+
+-Xms：设置Java进程初始堆内存大小
+
+-Xmx：设置Java进程最大堆内存大小
+
+-XX:MaxMetaspaceSize：设置Java进程最大元空间大小
+
+-XX:MetaspaceSize：设置Java进程初始元空间大小
+
+-XX:NewRatio：设置年轻代与年老代的比例
+
+-XX:SurvivorRatio：设置Eden与Survivor区的比例
