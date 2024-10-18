@@ -1,0 +1,177 @@
+---
+title: "秋招-1018-2024-深圳睿联技术笔试"
+description: "秋招-1018-2024-深圳睿联技术笔试两道大题的解答"
+pubDate: "10 18 2024"
+categories:
+  - tech
+tags:
+  - 算法
+  - 秋招
+---
+
+一共三道大题，第一道是SQL题，要求自己建表以及索引等，然后编写对应的SQL语句
+
+二三道是编程题，下面做这两道题的解答
+
+# 反转义
+
+## 题目描述
+
+现在有如下转义的规则:
+
+- %%表示转义后的%
+- %"表示转义后的"
+- %uXXXX表示四位数的十六进制数
+
+不符合以上转义规则的直接原样输出即可
+
+请编写一个反转义的函数
+
+### 代码实现
+```java
+public class UnescapeUtil {
+
+    public static String unescape(String input) {
+        if (input == null) {
+            return null;
+        }
+        StringBuilder result = new StringBuilder();
+        int length = input.length();
+        int i = 0;
+
+        while (i < length) {
+            char c = input.charAt(i);
+
+            if (c == '%' && i + 1 < length) {
+                char nextChar = input.charAt(i + 1);
+
+                if (nextChar == '%') {
+                    // %% 表示转义后的 %
+                    result.append('%');
+                    i += 2;
+                } else if (nextChar == '"') {
+                    // %双引号 表示转义后的双引号
+                    result.append('"');
+                    i += 2;
+                } else if (nextChar == 'u' && i + 5 < length) {
+                    // %uxxxx 表示四位数的十六进制数
+                    String hex = input.substring(i + 2, i + 6);
+                    try {
+                        int codePoint = Integer.parseInt(hex, 16);
+                        result.appendCodePoint(codePoint);
+                        i += 6;
+                    } catch (NumberFormatException e) {
+                        // 如果解析失败，原样输出
+                        result.append(c);
+                    }
+                } else {
+                    // 不符合转义规则的原样输出
+                    result.append(c);
+                    i++;
+                }
+            } else {
+                // 不符合转义规则的原样输出
+                result.append(c);
+                i++;
+            }
+        }
+
+        return result.toString();
+    }
+}
+```
+
+# 马戏团表演
+
+## 题目描述
+
+有一个马戏团表演的评分系数数组evaluate，每一个节目所花费的时间都是一个时间单位，每个节目的评分是由花费的时间X评分系数组成的
+
+你可以舍弃一些节目或者对节目表演顺序进行随意排序最后获得一个总和最高的分数
+
+也就是说:
+
+evaluate = [-3,-5,-8] 应当返回0
+
+evaluate = [4,3,2] 应当返回14，因为2*1 + 3*2 + 4*3 = 20
+
+evaluate = [-1,-9,0,5,-10] 应当返回14，因为舍弃-9和-10，-1*1 + 0*2 + 5*3 = 14
+
+### 思路
+
+如果数组元素全为负数直接返回0，如果数组元素全为正数，
+将其从小到大排序然后再按照顺序进行乘法运算和加法运算，
+如4,3,2可以将其排序为2，3，4然后按表演顺序乘加，2乘1，3乘2，4乘3；如果正负数都有的话，假设第一个数是负数，如果它不是数组中最小的负数，那么可以将其作为第一个表演的节目，然后后面对变量maxResult进行维护和判断，如果加上下一个元素乘i+1的值比maxResult小的话，那么删除这个元素，然后接着判断和更新，最后得出一个最大的maxResult
+
+但是这个代码有很多用例过不去，后续再进行优化，思路就是和贪心算法里做买卖股票的最佳时机差不多
+
+### 代码实现
+
+```java
+import java.util.*;
+public class JVMPractice {
+    public static int maxScore(int[] evaluate) {
+        //如果全负数，直接返回0即可
+        if (allNegative(evaluate)) return 0;
+        //如果全正数，直接排序，然后从小到大加即可
+        if(allPositive(evaluate)) {
+            Arrays.sort(evaluate);
+            int sum = 0;
+            for (int i = 0; i < evaluate.length; i++) {
+                sum += evaluate[i] * (i + 1);
+            }
+            return sum;
+        }
+        //如果正负数都有的话，进入下面的实现逻辑
+        // 如果有正数和负数
+        int maxResult = 0;
+        int time = 1;
+
+        // 先处理正数
+        int[] positiveNumbers = Arrays.stream(evaluate).filter(x -> x > 0).sorted().toArray();
+        for (int num : positiveNumbers) {
+            maxResult += num * time;
+            time++;
+        }
+
+        // 处理负数
+        int[] negativeNumbers = Arrays.stream(evaluate).filter(x -> x < 0).toArray();
+        Arrays.sort(negativeNumbers);
+
+        for (int num : negativeNumbers) {
+            int tempResult = maxResult + num * time;
+            if (tempResult > maxResult) {
+                maxResult = tempResult;
+                time++;
+            }
+        }
+
+        return maxResult;
+    }
+
+    public static boolean allPositive(int[] arr) {
+        return Arrays.stream(arr).allMatch(x -> x > 0);
+    }
+
+    public static boolean allNegative(int[] arr) {
+        return Arrays.stream(arr).allMatch(x -> x < 0);
+    }
+    public static void main(String[] args) {
+        int[] evaluate1 = {-3, -5, -8};
+        System.out.println(maxScore(evaluate1)); // 输出: 0
+
+        int[] evaluate2 = {4, 3, 2};
+        System.out.println(maxScore(evaluate2)); // 输出: 20
+
+        int[] evaluate3 = {-1, -9, 0, 5, -10};
+        System.out.println(maxScore(evaluate3)); // 输出: 14
+    }
+}
+
+```
+
+# 总结
+
+总的来说难度不算很大，但是编程平台用的不是牛客，需要注意细节的地方
+
+last update:10-18-2024
